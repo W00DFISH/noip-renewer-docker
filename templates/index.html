@@ -492,7 +492,30 @@ async function doUpdate(){
         `<span style="font-size:13px;color:var(--muted2)">Click ⬇️ Update Now to install.</span>`;
     }
   }catch(e){}
+  // Load commit log
+  loadChangelog();
 })();
+
+async function loadChangelog(){
+  try{
+    const r = await fetch('/api/changelog');
+    const d = await r.json();
+    const box = document.getElementById('changelogBox');
+    if(!d.ok||!d.entries.length){
+      box.innerHTML='<div style="padding:14px 20px;color:var(--muted)">Could not load: '+(d.error||'no entries')+'</div>';
+      return;
+    }
+    box.innerHTML = d.entries.map((e,i)=>`
+      <div style="display:flex;gap:16px;padding:10px 20px;border-bottom:1px solid var(--border);align-items:flex-start;${i===0?'background:rgba(0,229,160,.03)':''}">
+        <span style="color:var(--muted);font-size:11px;flex-shrink:0;min-width:155px">${esc(e.date)}</span>
+        <span style="color:var(--purple);font-size:11px;flex-shrink:0">${esc(e.sha)}</span>
+        <span style="color:${i===0?'var(--green)':'var(--text)'};flex:1">${esc(e.message)}${i===0?' <span style="font-size:10px;color:var(--green);background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);padding:1px 7px;border-radius:4px;margin-left:6px">latest</span>':''}</span>
+      </div>`).join('');
+  }catch(e){
+    document.getElementById('changelogBox').innerHTML=
+      '<div style="padding:14px 20px;color:var(--muted)">Could not load commit log.</div>';
+  }
+}
 </script>
 </body>
 </html>

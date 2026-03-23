@@ -319,7 +319,19 @@ def api_version():
 @app.route("/api/changelog")
 def api_changelog():
     try:
-        entries = get_commits(limit=15)
+        commits = github_get("commits?per_page=20")
+        gmt7 = timezone(timedelta(hours=7))
+        entries = []
+        for c in commits:
+            # Parse ISO datetime and convert to GMT+7
+            dt_str = c["commit"]["author"]["date"]  # e.g. 2026-03-23T07:00:00Z
+            dt = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+            dt_gmt7 = dt.astimezone(gmt7)
+            entries.append({
+                "sha":     c["sha"][:7],
+                "message": c["commit"]["message"].split("\n")[0][:100],
+                "date":    dt_gmt7.strftime("%Y-%m-%d %H:%M GMT+7"),
+            })
         return jsonify({"ok": True, "entries": entries})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
