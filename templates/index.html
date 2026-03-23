@@ -98,14 +98,6 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
 .update-sha{font-family:var(--mono);font-size:11px}
 .update-log-wrap{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;height:140px;overflow-y:auto;font-family:var(--mono);font-size:12px;line-height:1.75;margin-top:12px;display:none}
 
-/* Changelog */
-.cl-row{display:flex;gap:14px;padding:11px 20px;border-bottom:1px solid var(--border);align-items:flex-start;font-size:13px}
-.cl-row:last-child{border-bottom:none}
-.cl-row.latest{background:rgba(0,229,160,.03)}
-.cl-date{color:var(--muted);font-family:var(--mono);font-size:11px;flex-shrink:0;margin-top:1px;min-width:90px}
-.cl-sha{color:var(--purple);font-family:var(--mono);font-size:11px;flex-shrink:0;margin-top:1px}
-.cl-msg{color:var(--text);flex:1}
-.cl-badge{font-size:10px;color:var(--green);background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);padding:1px 7px;border-radius:4px;margin-left:6px;vertical-align:middle;white-space:nowrap}
 
 /* Divider */
 .divider{height:1px;background:var(--border);margin:14px 0}
@@ -239,16 +231,6 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
       </div>
       <div class="update-log-wrap" id="updateLogBox"></div>
     </div>
-  </div>
-
-  <!-- Changelog -->
-  <div class="card span2">
-    <div class="card-header">
-      <span class="card-icon">📋</span>
-      <h2>Changelog</h2>
-      <span style="font-size:11px;color:var(--muted);margin-left:auto">Auto-loaded from GitHub commits</span>
-    </div>
-    <div id="changelogBox" style="padding:16px 20px;font-size:13px;color:var(--muted)">Loading...</div>
   </div>
 
 </div>
@@ -393,28 +375,6 @@ async function checkUpdate(){
   }
 }
 
-// ── Changelog ─────────────────────────────────────────────────────────────────
-async function loadChangelog(){
-  try{
-    const r=await fetch('/api/changelog');
-    const d=await r.json();
-    const box=document.getElementById('changelogBox');
-    if(!d.ok||!d.entries.length){
-      box.innerHTML='<div style="padding:4px 0;color:var(--muted)">Could not load: '+esc(d.error||'no entries')+'</div>';
-      return;
-    }
-    box.innerHTML=d.entries.map((e,i)=>`
-      <div class="cl-row${i===0?' latest':''}">
-        <span class="cl-date">${esc(e.date)}</span>
-        <span class="cl-sha">${esc(e.sha)}</span>
-        <span class="cl-msg">${esc(e.message)}${i===0?'<span class="cl-badge">latest</span>':''}</span>
-      </div>`).join('');
-  }catch(e){
-    document.getElementById('changelogBox').innerHTML=
-      '<div style="padding:16px;color:var(--muted)">Could not load changelog.</div>';
-  }
-}
-
 // ── Do Update ─────────────────────────────────────────────────────────────────
 async function doUpdate(){
   if(!confirm('Pull latest code from GitHub and rebuild the container?\n\nThe app will be unavailable for ~5 minutes during rebuild.')) return;
@@ -466,7 +426,6 @@ async function doUpdate(){
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async()=>{
   updateSchedPreview();
-  loadChangelog();
   ['gmt_offset','run_every_days','run_at_hour'].forEach(id=>
     document.getElementById(id).addEventListener('input',updateSchedPreview));
   try{
