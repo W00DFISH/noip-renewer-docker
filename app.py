@@ -104,29 +104,53 @@ def renew_account(username, password, totp_key):
                     for i, digit in enumerate(code):
                         digit_inputs[i].click()
                         digit_inputs[i].fill(digit)
-                        time.sleep(0.1)
+                        time.sleep(0.15)
+                    time.sleep(0.5)
                 else:
                     add_log("Typing full code...")
                     first = page.locator('input[type="number"], input[type="tel"]').first
                     first.click()
-                    page.keyboard.type(code, delay=100)
+                    page.keyboard.type(code, delay=150)
 
-                try: page.click('button[name="submit"]', timeout=5_000)
+                # Try multiple submit methods
+                submitted = False
+                for selector in ['button[name="submit"]', 'button[type="submit"]', 'input[type="submit"]', 'button.btn-primary']:
+                    try:
+                        page.click(selector, timeout=3_000)
+                        submitted = True
+                        add_log(f"Submitted via {selector}")
+                        break
+                    except: pass
+                if not submitted:
+                    page.keyboard.press("Enter")
+                    add_log("Submitted via Enter")
+
+                try: page.wait_for_url(lambda url: "2fa" not in url and "verify" not in url, timeout=15_000)
                 except:
-                    try: page.click('button[type="submit"]', timeout=5_000)
-                    except: page.keyboard.press("Enter")
+                    try: page.wait_for_load_state("networkidle", timeout=10_000)
+                    except: pass
 
-                try: page.wait_for_load_state("networkidle", timeout=15_000)
-                except: pass
                 add_log(f"Post-2FA: {page.url}")
+                if "2fa" in page.url or "verify" in page.url:
+                    raise RuntimeError("2FA verification failed — check TOTP key or code expired")
 
             add_log("✅ Login successful!")
 
             renewed = []
             while True:
                 add_log("📋 Loading DNS records...")
-                page.goto("https://my.noip.com/dns/records", wait_until="networkidle", timeout=30_000)
-                time.sleep(2)
+                # Retry up to 3 times — my.noip.com sometimes aborts on first load
+                for attempt in range(3):
+                    try:
+                        page.goto("https://my.noip.com/dns/records",
+                                  wait_until="domcontentloaded", timeout=30_000)
+                        time.sleep(3)
+                        break
+                    except Exception as e:
+                        add_log(f"Retry {attempt+1}/3: {str(e)[:80]}")
+                        time.sleep(2)
+                else:
+                    raise RuntimeError("Could not load my.noip.com after 3 attempts")
                 if "login" in page.url:
                     raise RuntimeError("Session lost")
                 try: page.locator("#zone-collection-wrapper").wait_for(timeout=15_000)
