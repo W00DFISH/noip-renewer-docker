@@ -1,6 +1,6 @@
 #!/bin/bash
-# Self-update: pull latest code, rebuild image, recreate container
-# Key: container stops itself LAST, new container takes over
+# Self-update: pull latest code, rebuild image, start new container
+# Uses nohup to detach from current container process before stopping it
 
 set -e
 export DOCKER_API_VERSION=1.43
@@ -26,7 +26,7 @@ cd "$WORK_DIR"
 docker build -t "$IMAGE" .
 echo "--- Build complete!"
 
-# Save SHA + version to config volume
+# Save SHA + version to config
 python3 -c "
 import json
 cfg='/data/config.json'
@@ -38,21 +38,39 @@ json.dump(c,open(cfg,'w'),indent=2)
 print('Config saved.')
 "
 
-# Cleanup clone
+# Cleanup
 rm -rf "$WORK_DIR"
 
-# Get current container port/volume config to recreate identically
-echo "--- Recreating container..."
-docker stop "$CONTAINER" || true
-docker rm "$CONTAINER" || true
+echo "--- Starting new container (detached)..."
+
+# Write a restart script that runs OUTSIDE this container
+cat > /tmp/do_restart.sh << RESTART
+#!/bin/bash
+export DOCKER_API_VERSION=1.43
+sleep 2
+docker stop $CONTAINER 2>/dev/null || true
+docker rm $CONTAINER 2>/dev/null || true
 docker run -d \
-  --name "$CONTAINER" \
+  --name $CONTAINER \
   -p 7895:7895 \
   -v noip_data:/data \
   -v /var/run/docker.sock:/var/run/docker.sock \
   --restart unless-stopped \
   -e GITHUB_REPO="$REPO_URL" \
   -e CONTAINER_NAME="$CONTAINER" \
-  "$IMAGE"
+  $IMAGE
+echo "=== New container started! v$NEW_VER ==="
+RESTART
 
-echo "=== Done! v$NEW_VER ($NEW_SHA) — container restarted ==="
+chmod +x /tmp/do_restart.sh
+
+# Run restart script detached via docker host — survives container stop
+nohup docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /tmp/do_restart.sh:/do_restart.sh \
+  -e DOCKER_API_VERSION=1.43 \
+  docker:cli \
+  sh /do_restart.sh > /tmp/restart.log 2>&1 &
+
+echo "=== Update complete! v$NEW_VER ($NEW_SHA)"
+echo "=== Container will restart in ~5 seconds..."
