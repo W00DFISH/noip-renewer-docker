@@ -328,6 +328,11 @@ def api_update():
     global update_running
     if update_running:
         return jsonify({"ok": False, "error": "Update already running"})
+    # Check docker socket accessible
+    if not os.path.exists("/var/run/docker.sock"):
+        return jsonify({"ok": False, "error": "Docker socket not found. Make sure docker-compose.yml mounts /var/run/docker.sock"})
+    if not os.path.exists("/usr/local/bin/update.sh"):
+        return jsonify({"ok": False, "error": "update.sh not found in container"})
     threading.Thread(target=do_update, daemon=True).start()
     return jsonify({"ok": True})
 

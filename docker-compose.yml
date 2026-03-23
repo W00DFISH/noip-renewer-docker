@@ -8,12 +8,11 @@ services:
     ports:
       - "7895:7895"
     volumes:
-      - noip_data:/data                          # config persistent
-      - /var/run/docker.sock:/var/run/docker.sock # docker socket để self-update
-      - noip_app:/app                             # app code (git pull vào đây)
+      - noip_data:/data                           # config persistent
+      - /var/run/docker.sock:/var/run/docker.sock  # docker socket để self-update
     restart: unless-stopped
     environment:
-      - CONTAINER_NAME=noip-renewer              # tên container để self-restart
+      - CONTAINER_NAME=noip-renewer
       - GITHUB_REPO=https://github.com/W00DFISH/noip-renewer-docker
     logging:
       driver: "json-file"
@@ -23,4 +22,3 @@ services:
 
 volumes:
   noip_data:
-  noip_app:
