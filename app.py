@@ -328,6 +328,53 @@ def api_check_update():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
+update_logs   = []
+update_running = False
+
+def do_update():
+    global update_running
+    update_logs.clear()
+    update_running = True
+    try:
+        import subprocess
+        update_logs.append("[INFO] Starting self-update...")
+        env = os.environ.copy()
+        env["DOCKER_API_VERSION"] = "1.43"
+        proc = subprocess.Popen(
+            ["/usr/local/bin/update.sh"],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, env=env,
+        )
+        for line in proc.stdout:
+            update_logs.append(line.rstrip())
+            log.info(f"[UPDATE] {line.rstrip()}")
+        proc.wait()
+        if proc.returncode == 0:
+            update_logs.append("[OK] Update complete — container restarting...")
+        else:
+            update_logs.append(f"[ERROR] Update failed (code {proc.returncode})")
+            update_running = False
+    except Exception as e:
+        update_logs.append(f"[ERROR] {e}")
+        update_running = False
+
+@app.route("/api/update", methods=["POST"])
+def api_update():
+    global update_running
+    try:
+        if update_running:
+            return jsonify({"ok": False, "error": "Already running"})
+        if not os.path.exists("/var/run/docker.sock"):
+            return jsonify({"ok": False, "error": "Docker socket not mounted. Add to docker-compose volumes."})
+        threading.Thread(target=do_update, daemon=True).start()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+@app.route("/api/update_status")
+def api_update_status():
+    return jsonify({"running": update_running, "logs": update_logs[-50:]})
+
 if __name__ == "__main__":
     cfg = load_config()
     apply_schedule(cfg)

@@ -8,9 +8,11 @@ services:
       - "7895:7895"
     volumes:
       - noip_data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
     environment:
       - GITHUB_REPO=https://github.com/W00DFISH/noip-renewer-docker
+      - CONTAINER_NAME=noip-renewer
     logging:
       driver: "json-file"
       options:
