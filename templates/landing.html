@@ -270,6 +270,7 @@ footer {
     <h1>No-IP <span>Renewer</span></h1>
     <span class="nav-tag">v{{ version }}</span>
   </div>
+  <div style="font-family:var(--mono);font-size:11px;color:var(--muted);display:none" id="buildInfo">Built {{ built }}</div>
   <div class="nav-links">
     <a href="/setup" class="nav-btn nav-btn-ghost">📖 Setup Guide</a>
     <a href="/config" class="nav-btn nav-btn-primary">⚙️ Open App</a>
@@ -373,9 +374,14 @@ footer {
 
 <!-- Footer -->
 <footer>
-  <div class="footer-left">No-IP Renewer · Docker Edition · github.com/W00DFISH · <span style="color:var(--green)">v{{ version }}</span></div>
+  <div class="footer-left">
+    No-IP Renewer · Docker Edition · github.com/W00DFISH ·
+    <span style="color:var(--green)">v{{ version }}</span> ·
+    <span style="color:var(--muted)">Built {{ built }}</span>
+  </div>
   <div class="footer-right">
     <a href="https://github.com/W00DFISH/noip-renewer-docker" target="_blank" class="footer-link">GitHub →</a>
+    <a href="https://github.com/W00DFISH/noip-renewer-docker/blob/main/CHANGELOG.md" target="_blank" class="footer-link">Changelog</a>
     <a href="/setup" class="footer-link">Setup Guide</a>
     <a href="/config" class="footer-link">App</a>
   </div>

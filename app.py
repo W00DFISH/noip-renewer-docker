@@ -26,7 +26,38 @@ def get_version():
     except Exception:
         return "unknown"
 
-APP_VERSION = get_version()
+def get_build_time():
+    """Return image build time in GMT+7."""
+    try:
+        from datetime import timezone, timedelta
+        gmt7 = timezone(timedelta(hours=7))
+        ts = os.path.getmtime("/app/VERSION")
+        return datetime.fromtimestamp(ts, tz=gmt7).strftime("%Y-%m-%d %H:%M GMT+7")
+    except Exception:
+        return "unknown"
+
+def get_changelog_latest():
+    """Return first changelog entry (latest version notes)."""
+    try:
+        with open("/app/CHANGELOG.md") as f:
+            lines = f.readlines()
+        notes = []
+        in_section = False
+        for line in lines:
+            if line.startswith("## ") and not in_section:
+                in_section = True
+                notes.append(line.strip())
+            elif line.startswith("## ") and in_section:
+                break
+            elif in_section and line.strip():
+                notes.append(line.strip())
+        return "\n".join(notes)
+    except Exception:
+        return ""
+
+APP_VERSION  = get_version()
+APP_BUILT    = get_build_time()
+APP_CHANGELOG = get_changelog_latest()
 
 # ── Config ────────────────────────────────────────────────────────────────────
 DEFAULT_CONFIG = {
@@ -244,22 +275,24 @@ def check_upstream(cfg):
 # ── Routes ────────────────────────────────────────────────────────────────────
 @app.route("/")
 def landing():
-    return render_template("landing.html", version=APP_VERSION)
+    return render_template("landing.html", version=APP_VERSION, built=APP_BUILT)
 
 @app.route("/setup")
 def setup_guide():
-    return render_template("setup.html", version=APP_VERSION)
+    return render_template("setup.html", version=APP_VERSION, built=APP_BUILT)
 
 @app.route("/config")
 def config_page():
     cfg = load_config()
-    return render_template("index.html", config=cfg, version=APP_VERSION)
+    return render_template("index.html", config=cfg, version=APP_VERSION, built=APP_BUILT)
 
 @app.route("/api/version")
 def api_version():
     cfg = load_config()
     return jsonify({
-        "version": APP_VERSION,
+        "version":   APP_VERSION,
+        "built":     APP_BUILT,
+        "changelog": APP_CHANGELOG,
         "current_sha": cfg.get("current_sha", ""),
     })
 

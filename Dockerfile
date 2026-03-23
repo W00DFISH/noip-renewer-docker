@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
 
 COPY app.py .
 COPY VERSION .
+COPY CHANGELOG.md .
 COPY templates/ templates/
 COPY update.sh /usr/local/bin/update.sh
 RUN chmod +x /usr/local/bin/update.sh && mkdir -p /data
