@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      no_cache: false
+    pull_policy: never
     container_name: noip-renewer
     ports:
       - "7895:7895"

@@ -17,6 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && playwright install chromium
 
 COPY app.py .
+COPY VERSION .
 COPY templates/ templates/
 COPY update.sh /usr/local/bin/update.sh
 RUN chmod +x /usr/local/bin/update.sh && mkdir -p /data
