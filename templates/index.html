@@ -340,22 +340,16 @@ async function checkUpdate(){
   const origText = btn ? btn.textContent : '';
   if(btn){ btn.textContent='⏳ Checking...'; btn.disabled=true; }
 
-  // Clear old update log
-  const logBox = document.getElementById('updateLogBox');
-  if(logBox){ logBox.style.display='none'; logBox.innerHTML=''; }
-  const nowBtn = document.getElementById('updateNowBtn');
-  if(nowBtn) nowBtn.style.display='none';
-
   try{
     const r = await fetch('/api/check_update');
     const d = await r.json();
     if(btn){ btn.textContent=origText; btn.disabled=false; }
-
     if(!d.ok){ alert('Could not check:\n' + d.error); return; }
 
     if(d.has_update){
-      // Update available — jump straight to update overlay, no confirm needed
+      // Show badge + info, reveal Update Now button — do NOT auto-run
       document.getElementById('updateBadge').classList.add('visible');
+      document.getElementById('updateNowBtn').style.display = 'flex';
       document.getElementById('updateInfo').innerHTML =
         `<strong style="color:var(--yellow)">⚠️ New version available!</strong><br><br>`+
         `<table style="font-size:13px;border-collapse:collapse">`+
@@ -367,11 +361,12 @@ async function checkUpdate(){
         `<td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">(${esc(d.latest)})</td></tr>`+
         `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">What's new</td>`+
         `<td colspan="2" style="color:var(--text);font-style:italic">${esc(d.message)}</td></tr>`+
-        `</table>`;
-      // Auto-start update immediately
-      doUpdate(true);
+        `</table><br>`+
+        `Click <strong style="color:var(--yellow)">⬇️ Update Now</strong> to install.`;
+      scrollToUpdate();
     } else {
       document.getElementById('updateBadge').classList.remove('visible');
+      document.getElementById('updateNowBtn').style.display = 'none';
       document.getElementById('updateInfo').innerHTML =
         `<span style="color:var(--green)">✅ Already up to date!</span> `+
         `<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${esc(d.current_version||'')} (${esc(d.current)})</span>`;
@@ -391,9 +386,7 @@ async function resetUpdate(){
   document.getElementById('updateInfo').innerHTML='<span style="color:var(--green)">✅ State reset. You can try again.</span>';
 }
 
-async function doUpdate(skipConfirm){
-  if(!skipConfirm && !confirm('Pull latest code from GitHub and rebuild the container?\n\nThis takes ~5 minutes. Do not close the tab.')) return;
-
+async function doUpdate(){
   // Show fullscreen overlay — blocks all interaction
   let overlay = document.createElement('div');
   overlay.id = 'updateOverlay';
@@ -409,29 +402,15 @@ async function doUpdate(skipConfirm){
   document.body.appendChild(overlay);
   window.onbeforeunload = () => 'Update is in progress!';
 
-  function logLine(l){
-    const box = document.getElementById('ovLog');
-    if(!box) return;
-    let c = '#5a6080';
-    if(l.includes('[OK]')||l.includes('Done')||l.includes('complete')) c='#00e5a0';
-    else if(l.includes('[ERROR]')) c='#ff6b6b';
-    else if(l.includes('===')) c='#4d9fff';
-    box.innerHTML += `<div style="color:${c}">${esc(l)}</div>`;
-    box.scrollTop = box.scrollHeight;
-  }
-
   const r = await fetch('/api/update', {method:'POST'});
   const d = await r.json();
   if(!d.ok){
     if(d.error === 'already_running'){
-      // Update is already running — show overlay with existing logs
       document.getElementById('ovTitle').textContent = '⏳ Update in progress...';
-      document.getElementById('ovMsg').textContent = 'An update is already running. Showing live log.';
-      // fall through to polling below
+      document.getElementById('ovMsg').textContent = 'An update is already running.';
     } else {
       document.body.removeChild(overlay);
       window.onbeforeunload = null;
-      // Show reset option
       if(confirm('Error: ' + d.error + '\n\nReset update state and try again?')){
         await fetch('/api/update_reset', {method:'POST'});
       }
@@ -439,10 +418,7 @@ async function doUpdate(skipConfirm){
     }
   }
 
-  logLine('[INFO] Update started...');
-
   let doneTriggered = false;
-
   function startCountdown(){
     if(doneTriggered) return;
     doneTriggered = true;
@@ -453,10 +429,7 @@ async function doUpdate(skipConfirm){
     const cdEl = document.getElementById('ovCount');
     cdEl.style.display = 'block';
     let n = 15; cdEl.textContent = n;
-    const cd = setInterval(()=>{
-      n--; cdEl.textContent = n;
-      if(n<=0){ clearInterval(cd); location.reload(); }
-    }, 1000);
+    const cd = setInterval(()=>{ n--; cdEl.textContent = n; if(n<=0){ clearInterval(cd); location.reload(); }}, 1000);
   }
 
   const poll = setInterval(async()=>{
@@ -476,17 +449,9 @@ async function doUpdate(skipConfirm){
           box.scrollTop = box.scrollHeight;
         }
       }
-      // Trigger countdown as soon as [OK] appears in logs
-      if(d2.logs.some(l=>l.includes('[OK]'))){
-        startCountdown();
-      } else if(!d2.running){
-        clearInterval(poll);
-        document.body.removeChild(overlay);
-        window.onbeforeunload = null;
-        alert('Update failed. Check logs.');
-      }
+      if(d2.logs.some(l=>l.includes('[OK]'))){ startCountdown(); }
+      else if(!d2.running){ clearInterval(poll); document.body.removeChild(overlay); window.onbeforeunload=null; alert('Update failed.'); }
     } catch(e){
-      // Connection error = container restarted = success!
       const box = document.getElementById('ovLog');
       if(box) box.innerHTML += `<div style="color:#4d9fff">[INFO] Container restarting...</div>`;
       startCountdown();
@@ -507,13 +472,24 @@ async function doUpdate(skipConfirm){
     if(d.next_run)document.getElementById('nextRunText').textContent='⏰ Next: '+d.next_run;
     if(d.running){setRunning(true);startPolling();}
   }catch(e){}
-  // Check if update is stuck
+  // Auto-check update on load — show badge only, never auto-run
   try{
     const ru=await fetch('/api/update_status');const du=await ru.json();
     if(du.running){
       document.getElementById('resetBtn').style.display='inline-flex';
       document.getElementById('updateInfo').innerHTML=
         '<span style="color:var(--yellow)">⚠️ An update appears to be running (or stuck). Click ↺ Reset stuck to clear.</span>';
+    }
+  }catch(e){}
+  // Silent update check — only show badge if available
+  try{
+    const rc=await fetch('/api/check_update');const dc=await rc.json();
+    if(dc.ok && dc.has_update){
+      document.getElementById('updateBadge').classList.add('visible');
+      document.getElementById('updateNowBtn').style.display='flex';
+      document.getElementById('updateInfo').innerHTML=
+        `<strong style="color:var(--yellow)">⚠️ Update available: v${esc(dc.latest_version||dc.latest)}</strong><br>`+
+        `<span style="font-size:13px;color:var(--muted2)">Click ⬇️ Update Now to install.</span>`;
     }
   }catch(e){}
 })();
