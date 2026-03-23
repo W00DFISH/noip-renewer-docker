@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: noip-renewer-web:local
     container_name: noip-renewer
     ports:
       - "7895:7895"
