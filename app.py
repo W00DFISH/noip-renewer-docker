@@ -153,34 +153,56 @@ def renew_account(username, password, totp_key):
                     raise RuntimeError("Could not load my.noip.com after 3 attempts")
                 if "login" in page.url:
                     raise RuntimeError("Session lost")
-                try: page.locator("#zone-collection-wrapper").wait_for(timeout=15_000)
-                except PWT: add_log("No zone wrapper."); break
+                try: page.locator("#zone-collection-wrapper, .dns-records, table, .expiration-banner, [hx-get*='/touch']").first.wait_for(timeout=15_000)
+                except PWT: add_log("No records wrapper."); break
 
-                banners = page.locator('[id^="expiration-banner-hostname-"]').all()
-                add_log(f"Found {len(banners)} host(s) needing confirmation.")
-                if not banners: add_log("✅ All good!"); break
+                # Find all Confirm buttons (hx-get*="/touch" is the new No-IP UI)
+                confirm_btns = page.locator('button[hx-get*="/touch"]').all()
+                confirm_btns = [b for b in confirm_btns if b.is_visible()]
 
-                host = banners[0]
+                if not confirm_btns:
+                    add_log("✅ No hosts need confirmation — all good!")
+                    break
+
+                add_log(f"Found {len(confirm_btns)} host(s) needing confirmation.")
+
+                host = confirm_btns[0]
+                # Get hostname from hx-get URL or nearby text
                 host_name = "unknown"
                 try:
-                    h4 = host.locator("h4").first.inner_text(timeout=2_000)
-                    host_name = re.sub(r'Expires in \d+ days - ', '', h4).strip()
+                    hx_url = host.get_attribute("hx-get", timeout=1_000)
+                    # Extract ID from URL like /ajax/host/89460306/touch
+                    host_id = hx_url.split("/")[-2] if hx_url else "?"
+                    # Try to find hostname text near the button
+                    xpath = "xpath=ancestor::div[contains(@class,'alert') or contains(@class,'banner') or contains(@class,'card')][1]"
+                    parent = page.locator(f'[hx-get="{hx_url}"]').locator(xpath)
+                    host_name = parent.inner_text(timeout=1_000).split("\n")[0][:50].strip()
+                    if not host_name: host_name = f"host-{host_id}"
                 except: pass
 
                 add_log(f"[{host_name}] Confirming...")
+
+                # Click the button directly (HTMX handles the request)
                 confirmed = False
                 try:
-                    for btn in host.locator("button").all():
-                        if btn.inner_text(timeout=1_000).strip().lower() == "confirm":
-                            btn.click(); confirmed = True
-                            add_log(f"[{host_name}] ✓"); time.sleep(2); break
-                except Exception as e: add_log(f"Button err: {e}")
+                    host.click()
+                    confirmed = True
+                    add_log(f"[{host_name}] ✓ Clicked Confirm")
+                    time.sleep(2)
+                except Exception as e:
+                    add_log(f"Button click err: {e}")
 
+                # Fallback: call hx-get URL via fetch
                 if not confirmed:
                     try:
-                        hx = host.locator("button[hx-get]").first.get_attribute("hx-get", timeout=2_000)
-                        if hx:
-                            r = page.evaluate(f"""async()=>{{const r=await fetch('{hx}',{{method:'GET',credentials:'include',headers:{{'HX-Request':'true'}}}});return r.ok;}}""")
+                        hx_url = host.get_attribute("hx-get", timeout=1_000)
+                        if hx_url:
+                            r = page.evaluate(f"""async()=>{{
+                                const r=await fetch('{hx_url}',{{
+                                    method:'GET',credentials:'include',
+                                    headers:{{'HX-Request':'true','HX-Current-URL':window.location.href}}
+                                }});return r.ok;
+                            }}""")
                             if r: confirmed = True; add_log(f"[{host_name}] HTMX ✓")
                     except Exception as e: add_log(f"HTMX err: {e}")
 
