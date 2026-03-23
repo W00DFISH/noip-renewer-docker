@@ -65,6 +65,22 @@ def get_build_time():
 APP_VERSION = get_version()
 APP_BUILT   = get_build_time()
 
+def init_sha():
+    """On first start, detect current SHA from GitHub if not saved."""
+    cfg = load_config()
+    if cfg.get("current_sha"):
+        return  # already set
+    try:
+        data = github_get("commits/main")
+        sha  = data["sha"][:7]
+        ver  = get_version()
+        cfg["current_sha"]      = sha
+        cfg["current_version"]  = ver
+        save_config(cfg)
+        log.info(f"Initialized SHA: {sha} v{ver}")
+    except Exception as e:
+        log.warning(f"Could not init SHA: {e}")
+
 # ── GitHub API ─────────────────────────────────────────────────────────────────
 def github_get(path):
     url = f"https://api.github.com/repos/{UPSTREAM_REPO}/{path}"
@@ -316,12 +332,20 @@ def api_check_update():
         current = cfg.get("current_sha", "")[:7]
         current_ver = cfg.get("current_version", APP_VERSION)
         has_update  = latest["sha"] != current
+        # Try to get latest version from GitHub VERSION file
+        try:
+            latest_ver_data = github_get("contents/VERSION")
+            import base64
+            latest_ver = base64.b64decode(latest_ver_data["content"]).decode().strip()
+        except Exception:
+            latest_ver = "?"
         return jsonify({
             "ok":              True,
             "has_update":      has_update,
             "latest":          latest["sha"],
             "current":         current,
             "current_version": current_ver,
+            "latest_version":  latest_ver,
             "message":         latest["message"],
             "date":            latest["date"],
         })
@@ -385,6 +409,7 @@ def api_update_status():
     return jsonify({"running": update_running, "logs": update_logs[-50:]})
 
 if __name__ == "__main__":
+    init_sha()
     cfg = load_config()
     apply_schedule(cfg)
     app.run(host="0.0.0.0", port=7895, debug=False, threaded=True)

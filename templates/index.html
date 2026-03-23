@@ -336,46 +336,48 @@ function scrollToUpdate(){
   document.getElementById('updateCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function checkUpdate(){
-  const btn=document.getElementById('checkBtn')||document.querySelector('.nbtn-ghost');
-  const origText='🔍 Check for update';
-  if(btn){btn.textContent='⏳ Checking...';btn.disabled=true;}
+  const btn = document.getElementById('checkBtn') || document.querySelector('[onclick="checkUpdate()"]');
+  const origText = btn ? btn.textContent : '';
+  if(btn){ btn.textContent='⏳ Checking...'; btn.disabled=true; }
+
   // Clear old update log
-  const logBox=document.getElementById('updateLogBox');
-  logBox.style.display='none'; logBox.innerHTML='';
-  document.getElementById('updateNowBtn').style.display='none';
+  const logBox = document.getElementById('updateLogBox');
+  if(logBox){ logBox.style.display='none'; logBox.innerHTML=''; }
+  const nowBtn = document.getElementById('updateNowBtn');
+  if(nowBtn) nowBtn.style.display='none';
+
   try{
-    const r=await fetch('/api/check_update');
-    const d=await r.json();
-    if(btn){btn.textContent=origText;btn.disabled=false;}
-    if(!d.ok){alert('Could not check:\n'+d.error);return;}
+    const r = await fetch('/api/check_update');
+    const d = await r.json();
+    if(btn){ btn.textContent=origText; btn.disabled=false; }
+
+    if(!d.ok){ alert('Could not check:\n' + d.error); return; }
+
     if(d.has_update){
+      // Update available — jump straight to update overlay, no confirm needed
       document.getElementById('updateBadge').classList.add('visible');
-      document.getElementById('updateInfo').innerHTML=
+      document.getElementById('updateInfo').innerHTML =
         `<strong style="color:var(--yellow)">⚠️ New version available!</strong><br><br>`+
-        `<table style="font-size:13px;border-collapse:collapse">` +
+        `<table style="font-size:13px;border-collapse:collapse">`+
         `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">Your version</td>`+
         `<td style="color:var(--red);font-weight:700">${esc(d.current_version||'unknown')}</td>`+
-        `<td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">${esc(d.current)}</td></tr>`+
-        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">Latest version</td>`+
-        `<td style="color:var(--green);font-weight:700">check GitHub</td>`+
-        `<td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">${esc(d.latest)}</td></tr>`+
+        `<td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">(${esc(d.current)})</td></tr>`+
+        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">Latest</td>`+
+        `<td style="color:var(--green);font-weight:700">v${esc(d.latest_version||'?')}</td>`+
+        `<td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">(${esc(d.latest)})</td></tr>`+
         `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">What's new</td>`+
         `<td colspan="2" style="color:var(--text);font-style:italic">${esc(d.message)}</td></tr>`+
-        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">Date</td>`+
-        `<td colspan="2" style="color:var(--muted2)">${esc(d.date)}</td></tr>`+
-        `</table><br>`+
-        `<strong>To update:</strong> Go to Portainer → Stacks → noip-renewer → pull and redeploy.`;
-      // Show Update Now button
-      document.getElementById('updateNowBtn').style.display = 'flex';
-      scrollToUpdate();
+        `</table>`;
+      // Auto-start update immediately
+      doUpdate(true);
     } else {
       document.getElementById('updateBadge').classList.remove('visible');
-      document.getElementById('updateInfo').innerHTML=
+      document.getElementById('updateInfo').innerHTML =
         `<span style="color:var(--green)">✅ Already up to date!</span> `+
         `<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${esc(d.current_version||'')} (${esc(d.current)})</span>`;
     }
   }catch(e){
-    if(btn){btn.textContent=origText;btn.disabled=false;}
+    if(btn){ btn.textContent=origText; btn.disabled=false; }
     alert('Error: '+e);
   }
 }
@@ -389,8 +391,8 @@ async function resetUpdate(){
   document.getElementById('updateInfo').innerHTML='<span style="color:var(--green)">✅ State reset. You can try again.</span>';
 }
 
-async function doUpdate(){
-  if(!confirm('Pull latest code from GitHub and rebuild the container?\n\nThis takes ~5 minutes. Do not close the tab.')) return;
+async function doUpdate(skipConfirm){
+  if(!skipConfirm && !confirm('Pull latest code from GitHub and rebuild the container?\n\nThis takes ~5 minutes. Do not close the tab.')) return;
 
   // Show fullscreen overlay — blocks all interaction
   let overlay = document.createElement('div');
