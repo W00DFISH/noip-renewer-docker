@@ -338,6 +338,10 @@ async function checkUpdate(){
   const btn=document.getElementById('checkBtn')||document.querySelector('.nbtn-ghost');
   const origText='🔍 Check for update';
   if(btn){btn.textContent='⏳ Checking...';btn.disabled=true;}
+  // Clear old update log
+  const logBox=document.getElementById('updateLogBox');
+  logBox.style.display='none'; logBox.innerHTML='';
+  document.getElementById('updateNowBtn').style.display='none';
   try{
     const r=await fetch('/api/check_update');
     const d=await r.json();
@@ -406,11 +410,11 @@ async function doUpdate(){
       if(!d2.running && !countdown){
         clearInterval(upPoll);
         if(d2.logs.some(l=>l.includes('[OK]'))){
-          btn.textContent = '✓ Done — reloading in 10s';
-          let n = 10;
+          btn.textContent = '✓ Done — reloading in 15s';
+          let n = 15;
           countdown = setInterval(()=>{
             n--;
-            btn.textContent = `✓ Done — reloading in ${n}s`;
+            btn.textContent = `✓ Done — reloading in ${n}s...`;
             if(n<=0){ clearInterval(countdown); location.reload(); }
           }, 1000);
         } else {
