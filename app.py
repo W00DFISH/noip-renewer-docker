@@ -18,6 +18,16 @@ CONFIG_FILE = "/data/config.json"
 run_logs    = []
 run_status  = {"running": False, "last_run": None, "last_result": None}
 
+# ── Version ───────────────────────────────────────────────────────────────────
+def get_version():
+    try:
+        with open("/app/VERSION") as f:
+            return f.read().strip()
+    except Exception:
+        return "unknown"
+
+APP_VERSION = get_version()
+
 # ── Config ────────────────────────────────────────────────────────────────────
 DEFAULT_CONFIG = {
     "username":      "",
@@ -234,16 +244,24 @@ def check_upstream(cfg):
 # ── Routes ────────────────────────────────────────────────────────────────────
 @app.route("/")
 def landing():
-    return render_template("landing.html")
+    return render_template("landing.html", version=APP_VERSION)
 
 @app.route("/setup")
 def setup_guide():
-    return render_template("setup.html")
+    return render_template("setup.html", version=APP_VERSION)
 
 @app.route("/config")
 def config_page():
     cfg = load_config()
-    return render_template("index.html", config=cfg)
+    return render_template("index.html", config=cfg, version=APP_VERSION)
+
+@app.route("/api/version")
+def api_version():
+    cfg = load_config()
+    return jsonify({
+        "version": APP_VERSION,
+        "current_sha": cfg.get("current_sha", ""),
+    })
 
 @app.route("/api/save", methods=["POST"])
 def api_save():
@@ -326,15 +344,17 @@ def do_update():
 @app.route("/api/update", methods=["POST"])
 def api_update():
     global update_running
-    if update_running:
-        return jsonify({"ok": False, "error": "Update already running"})
-    # Check docker socket accessible
-    if not os.path.exists("/var/run/docker.sock"):
-        return jsonify({"ok": False, "error": "Docker socket not found. Make sure docker-compose.yml mounts /var/run/docker.sock"})
-    if not os.path.exists("/usr/local/bin/update.sh"):
-        return jsonify({"ok": False, "error": "update.sh not found in container"})
-    threading.Thread(target=do_update, daemon=True).start()
-    return jsonify({"ok": True})
+    try:
+        if update_running:
+            return jsonify({"ok": False, "error": "Update already running"})
+        if not os.path.exists("/var/run/docker.sock"):
+            return jsonify({"ok": False, "error": "Docker socket not mounted. Check docker-compose.yml volumes."})
+        if not os.path.exists("/usr/local/bin/update.sh"):
+            return jsonify({"ok": False, "error": "update.sh not found in container."})
+        threading.Thread(target=do_update, daemon=True).start()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
 
 
 @app.route("/api/update_status")
