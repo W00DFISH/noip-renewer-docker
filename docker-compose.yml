@@ -1,0 +1,26 @@
+services:
+  noip-renewer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: noip-renewer-web:local
+    container_name: noip-renewer
+    ports:
+      - "7895:7895"
+    volumes:
+      - noip_data:/data                          # config persistent
+      - /var/run/docker.sock:/var/run/docker.sock # docker socket để self-update
+      - noip_app:/app                             # app code (git pull vào đây)
+    restart: unless-stopped
+    environment:
+      - CONTAINER_NAME=noip-renewer              # tên container để self-restart
+      - GITHUB_REPO=https://github.com/W00DFISH/noip-renewer-docker
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "2m"
+        max-file: "3"
+
+volumes:
+  noip_data:
+  noip_app:

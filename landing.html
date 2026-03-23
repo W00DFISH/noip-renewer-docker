@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>No-IP Renewer — Docker Edition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #07090f;
+  --s1:     #0d1018;
+  --s2:     #131620;
+  --border: #1c2030;
+  --green:  #00e5a0;
+  --green2: #00b87a;
+  --blue:   #4d9fff;
+  --yellow: #ffd166;
+  --red:    #ff6b6b;
+  --purple: #b57aff;
+  --text:   #dde1f5;
+  --muted:  #55607a;
+  --mono:   'JetBrains Mono', monospace;
+  --sans:   'Syne', sans-serif;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box }
+
+html { scroll-behavior:smooth }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Grid background ── */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(0,229,160,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,160,.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events:none; z-index:0;
+}
+
+/* ── Glow orbs ── */
+.orb {
+  position:fixed; border-radius:50%; filter:blur(120px);
+  pointer-events:none; z-index:0; opacity:.35;
+}
+.orb1 { width:600px; height:600px; background:#00e5a030; top:-200px; right:-200px; animation:drift1 18s infinite alternate ease-in-out }
+.orb2 { width:400px; height:400px; background:#4d9fff20; bottom:-100px; left:-100px; animation:drift2 14s infinite alternate ease-in-out }
+@keyframes drift1 { to { transform:translate(-80px, 60px) } }
+@keyframes drift2 { to { transform:translate(60px,-80px) } }
+
+/* ── Nav ── */
+nav {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 40px;
+  background: rgba(7,9,15,.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo { display:flex; align-items:center; gap:10px }
+.nav-logo .icon { font-size:22px }
+.nav-logo h1 { font-size:17px; font-weight:800; letter-spacing:-.02em }
+.nav-logo h1 span { color:var(--green) }
+.nav-tag {
+  font-family:var(--mono); font-size:10px; color:var(--green);
+  background:rgba(0,229,160,.08); border:1px solid rgba(0,229,160,.2);
+  padding:2px 9px; border-radius:99px; letter-spacing:.05em;
+}
+.nav-links { display:flex; gap:8px }
+.nav-btn {
+  padding:8px 18px; border-radius:8px; font-size:13px; font-weight:700;
+  cursor:pointer; text-decoration:none; font-family:var(--sans);
+  transition:all .2s; display:inline-flex; align-items:center; gap:6px;
+}
+.nav-btn-ghost { background:transparent; color:var(--text); border:1px solid var(--border) }
+.nav-btn-ghost:hover { border-color:var(--muted); color:#fff }
+.nav-btn-primary { background:var(--green); color:#000; border:none }
+.nav-btn-primary:hover { background:var(--green2) }
+
+/* ── Hero ── */
+.hero {
+  position:relative; z-index:1;
+  min-height:100vh;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  text-align:center;
+  padding:120px 24px 80px;
+}
+
+.hero-badge {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(0,229,160,.06); border:1px solid rgba(0,229,160,.2);
+  border-radius:99px; padding:6px 16px;
+  font-family:var(--mono); font-size:11px; color:var(--green);
+  letter-spacing:.08em; margin-bottom:28px;
+  animation: fadeUp .6s ease both;
+}
+.hero-badge::before {
+  content:''; width:6px; height:6px; border-radius:50%;
+  background:var(--green); animation:pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+.hero h2 {
+  font-size:clamp(44px,8vw,88px);
+  font-weight:900;
+  line-height:1.0;
+  letter-spacing:-.03em;
+  margin-bottom:20px;
+  animation: fadeUp .6s .1s ease both;
+}
+.hero h2 .line1 { display:block; color:var(--text) }
+.hero h2 .line2 { display:block; color:var(--green) }
+
+.hero-sub {
+  font-size:clamp(15px,2.5vw,19px);
+  color:var(--muted); max-width:560px;
+  line-height:1.65; margin-bottom:44px;
+  animation: fadeUp .6s .2s ease both;
+}
+
+.hero-btns {
+  display:flex; gap:14px; flex-wrap:wrap; justify-content:center;
+  animation: fadeUp .6s .3s ease both;
+}
+.hero-btn {
+  display:inline-flex; align-items:center; gap:9px;
+  padding:14px 28px; border-radius:10px;
+  font-size:15px; font-weight:700; font-family:var(--sans);
+  text-decoration:none; cursor:pointer; border:none;
+  transition:all .25s; letter-spacing:-.01em;
+}
+.hero-btn-primary {
+  background:var(--green); color:#000;
+  box-shadow:0 0 40px rgba(0,229,160,.25);
+}
+.hero-btn-primary:hover {
+  background:var(--green2);
+  box-shadow:0 0 60px rgba(0,229,160,.4);
+  transform:translateY(-2px);
+}
+.hero-btn-secondary {
+  background:var(--s2); color:var(--text);
+  border:1px solid var(--border);
+}
+.hero-btn-secondary:hover {
+  border-color:var(--muted);
+  transform:translateY(-2px);
+}
+
+/* Terminal mock */
+.terminal-wrap {
+  margin-top:64px; width:100%; max-width:660px;
+  animation: fadeUp .6s .4s ease both;
+}
+.terminal {
+  background:#04060c;
+  border:1px solid var(--border);
+  border-radius:14px; overflow:hidden;
+  box-shadow:0 32px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.03);
+}
+.terminal-bar {
+  background:var(--s2); padding:12px 16px;
+  display:flex; align-items:center; gap:8px;
+  border-bottom:1px solid var(--border);
+}
+.dot { width:12px; height:12px; border-radius:50% }
+.dot.r { background:#ff5f57 } .dot.y { background:#febc2e } .dot.g { background:#28c840 }
+.t-title { font-family:var(--mono); font-size:12px; color:var(--muted); margin-left:6px }
+.terminal-body { padding:20px 22px; font-family:var(--mono); font-size:13px; line-height:2; text-align:left }
+.t-comment { color:#2a3050 }
+.t-prompt { color:var(--muted) }
+.t-cmd { color:var(--text) }
+.t-ok { color:var(--green) }
+.t-info { color:var(--blue) }
+.t-warn { color:var(--yellow) }
+.t-cursor { display:inline-block; width:8px; height:14px; background:var(--green); vertical-align:middle; animation:blink 1s infinite }
+@keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+
+/* ── Features ── */
+.features {
+  position:relative; z-index:1;
+  padding:80px 24px 100px; max-width:1100px; margin:0 auto;
+}
+.section-label {
+  text-align:center; font-family:var(--mono);
+  font-size:11px; color:var(--green); letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:16px;
+}
+.section-title {
+  text-align:center; font-size:clamp(28px,5vw,42px);
+  font-weight:800; letter-spacing:-.02em; margin-bottom:48px;
+}
+
+.feat-grid {
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:16px;
+}
+.feat-card {
+  background:var(--s1); border:1px solid var(--border);
+  border-radius:14px; padding:24px;
+  transition:all .25s;
+  animation: fadeUp .5s ease both;
+}
+.feat-card:hover {
+  border-color:rgba(0,229,160,.25);
+  transform:translateY(-4px);
+  box-shadow:0 20px 40px rgba(0,0,0,.4);
+}
+.feat-icon { font-size:28px; margin-bottom:14px }
+.feat-title { font-size:16px; font-weight:700; margin-bottom:8px }
+.feat-desc { font-size:14px; color:var(--muted); line-height:1.65 }
+
+/* ── CTA ── */
+.cta {
+  position:relative; z-index:1;
+  padding:80px 24px 120px; text-align:center;
+}
+.cta-box {
+  max-width:640px; margin:0 auto;
+  background:linear-gradient(135deg, rgba(0,229,160,.06), rgba(0,229,160,.02));
+  border:1px solid rgba(0,229,160,.18);
+  border-radius:20px; padding:48px 40px;
+}
+.cta h2 { font-size:clamp(26px,4vw,38px); font-weight:800; margin-bottom:14px }
+.cta p { color:var(--muted); font-size:15px; margin-bottom:32px; line-height:1.65 }
+.cta-btns { display:flex; gap:12px; justify-content:center; flex-wrap:wrap }
+
+/* ── Footer ── */
+footer {
+  position:relative; z-index:1;
+  border-top:1px solid var(--border);
+  padding:24px 40px;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:12px;
+}
+.footer-left { font-family:var(--mono); font-size:12px; color:var(--muted) }
+.footer-right { display:flex; gap:16px }
+.footer-link { font-size:12px; color:var(--muted); text-decoration:none; transition:color .2s }
+.footer-link:hover { color:var(--green) }
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(24px) }
+  to   { opacity:1; transform:translateY(0) }
+}
+
+@media(max-width:600px) {
+  nav { padding:14px 20px }
+  .nav-links .nav-btn:first-child { display:none }
+  footer { padding:20px }
+}
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-logo">
+    <span class="icon">🔄</span>
+    <h1>No-IP <span>Renewer</span></h1>
+    <span class="nav-tag">Docker</span>
+  </div>
+  <div class="nav-links">
+    <a href="/setup" class="nav-btn nav-btn-ghost">📖 Setup Guide</a>
+    <a href="/config" class="nav-btn nav-btn-primary">⚙️ Open App</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-badge">Running on your NAS · Residential IP · No Cloud</div>
+
+  <h2>
+    <span class="line1">Keep your No-IP</span>
+    <span class="line2">hostnames alive.</span>
+  </h2>
+
+  <p class="hero-sub">
+    Automatically confirm your No-IP free hostnames before they expire.
+    Runs inside Docker on your Synology NAS — no cloud, no blocked IPs, no manual clicks.
+  </p>
+
+  <div class="hero-btns">
+    <a href="/setup" class="hero-btn hero-btn-secondary">📖 Setup Guide</a>
+    <a href="/config" class="hero-btn hero-btn-primary">⚙️ Open App →</a>
+  </div>
+
+  <!-- Terminal -->
+  <div class="terminal-wrap">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <span class="t-title">noip-renewer · live log</span>
+      </div>
+      <div class="terminal-body">
+        <div><span class="t-comment"># No-IP Auto Renewer v2.0</span></div>
+        <div><span class="t-prompt">→ </span><span class="t-info">🌏 Timezone: GMT+7 · 09:00 local</span></div>
+        <div><span class="t-prompt">→ </span><span class="t-info">⏰ Schedule: every 1 day at 09:00</span></div>
+        <div><span class="t-prompt">→ </span><span class="t-cmd">🔐 Logging in to No-IP...</span></div>
+        <div><span class="t-prompt">→ </span><span class="t-cmd">🔑 2FA detected — entering TOTP...</span></div>
+        <div><span class="t-prompt">→ </span><span class="t-ok">✅ Login successful!</span></div>
+        <div><span class="t-prompt">→ </span><span class="t-cmd">📋 Found 3 host(s) needing confirmation.</span></div>
+        <div><span class="t-prompt">→ </span><span class="t-ok">✓ woodfish.ddns.net confirmed!</span></div>
+        <div><span class="t-prompt">→ </span><span class="t-ok">✓ 365nqtp.ddns.net confirmed!</span></div>
+        <div><span class="t-prompt">→ </span><span class="t-ok">✓ 365pngo.ddns.net confirmed!</span></div>
+        <div><span class="t-prompt">→ </span><span class="t-ok">✅ Done! Renewed 3 hosts.</span></div>
+        <div><span class="t-prompt">$ </span><span class="t-cursor"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features">
+  <div class="section-label">What's included</div>
+  <h2 class="section-title">Everything you need</h2>
+
+  <div class="feat-grid">
+    <div class="feat-card" style="animation-delay:.05s">
+      <div class="feat-icon">🏠</div>
+      <div class="feat-title">Runs on your NAS</div>
+      <div class="feat-desc">Docker container on Synology NAS. Uses your residential IP — No-IP never blocks it.</div>
+    </div>
+    <div class="feat-card" style="animation-delay:.1s">
+      <div class="feat-icon">🔐</div>
+      <div class="feat-title">2FA Support</div>
+      <div class="feat-desc">Handles No-IP 2FA (TOTP) automatically. Works with Google Authenticator.</div>
+    </div>
+    <div class="feat-card" style="animation-delay:.15s">
+      <div class="feat-icon">⏰</div>
+      <div class="feat-title">Smart Scheduler</div>
+      <div class="feat-desc">Set it and forget it. Configure run time in your local timezone — runs automatically.</div>
+    </div>
+    <div class="feat-card" style="animation-delay:.2s">
+      <div class="feat-icon">📊</div>
+      <div class="feat-title">Live Log</div>
+      <div class="feat-desc">Watch every step in real-time from the web UI. No SSH, no Portainer needed.</div>
+    </div>
+    <div class="feat-card" style="animation-delay:.25s">
+      <div class="feat-icon">🔄</div>
+      <div class="feat-title">One-click Update</div>
+      <div class="feat-desc">New version available? Click Update in the UI — pulls from GitHub and restarts automatically.</div>
+    </div>
+    <div class="feat-card" style="animation-delay:.3s">
+      <div class="feat-icon">💾</div>
+      <div class="feat-title">Persistent Config</div>
+      <div class="feat-desc">Credentials and schedule saved in Docker volume. Survives container restarts.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="cta-box">
+    <h2>Ready to set it up?</h2>
+    <p>Follow the step-by-step guide to deploy on Portainer in under 10 minutes. Then open the app and you're done.</p>
+    <div class="cta-btns">
+      <a href="/setup" class="hero-btn hero-btn-secondary">📖 Setup Guide</a>
+      <a href="/config" class="hero-btn hero-btn-primary">⚙️ Open App →</a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-left">No-IP Renewer · Docker Edition · github.com/W00DFISH</div>
+  <div class="footer-right">
+    <a href="https://github.com/W00DFISH/noip-renewer-docker" target="_blank" class="footer-link">GitHub →</a>
+    <a href="/setup" class="footer-link">Setup Guide</a>
+    <a href="/config" class="footer-link">App</a>
+  </div>
+</footer>
+
+</body>
+</html>
