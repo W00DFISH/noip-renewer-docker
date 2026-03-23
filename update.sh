@@ -20,6 +20,10 @@ NEW_SHA=$(git -C "$WORK_DIR" rev-parse --short HEAD)
 NEW_VER=$(cat "$WORK_DIR/VERSION" 2>/dev/null || echo "unknown")
 echo "Latest: v$NEW_VER ($NEW_SHA)"
 
+# Save old image ID before rebuild
+OLD_IMAGE_ID=$(docker images -q "$IMAGE" 2>/dev/null || true)
+echo "Old image ID: ${OLD_IMAGE_ID:-none}"
+
 # Rebuild image
 echo "--- Rebuilding Docker image..."
 cd "$WORK_DIR"
@@ -60,9 +64,13 @@ docker run -d \
   -e CONTAINER_NAME="$CONTAINER" \
   $IMAGE
 echo "=== New container started! v$NEW_VER ==="
-# Cleanup unused images (old builds)
-echo "--- Cleaning up unused images..."
-docker image prune -f
+# Remove old image by ID (now unused since container uses new one)
+if [ -n "$OLD_IMAGE_ID" ]; then
+  echo "--- Removing old image: $OLD_IMAGE_ID"
+  docker rmi "$OLD_IMAGE_ID" 2>/dev/null && echo "Old image removed." || echo "Could not remove old image (may be in use)."
+fi
+# Also clean dangling images
+docker image prune -f 2>/dev/null || true
 echo "--- Cleanup done."
 RESTART
 
