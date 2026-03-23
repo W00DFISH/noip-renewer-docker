@@ -7,105 +7,94 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg:#080b12; --s1:#0f1320; --s2:#151929; --border:#1e2438; --border2:#252d45;
-  --green:#00e5a0; --green2:#00b87a; --blue:#4d9fff; --yellow:#ffd166;
-  --red:#ff6b6b; --purple:#b57aff;
-  --text:#dde1f5; --muted:#5a6080; --muted2:#8890b0;
-  --mono:'JetBrains Mono',monospace; --sans:'Syne',sans-serif;
+:root{
+  --bg:#080b12;--s1:#0f1320;--s2:#151929;--border:#1e2438;--border2:#252d45;
+  --green:#00e5a0;--green2:#00b87a;--blue:#4d9fff;--yellow:#ffd166;
+  --red:#ff6b6b;--purple:#b57aff;
+  --text:#dde1f5;--muted:#5a6080;--muted2:#8890b0;
+  --mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding-bottom:60px}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,.02) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0}
 
-/* Nav */
 nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:13px 32px;background:rgba(8,11,18,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
 .nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:inherit}
 .nav-logo span{font-size:18px}
-.nav-logo b{font-size:15px;font-weight:800;font-family:var(--sans)}.nav-logo b em{color:var(--green);font-style:normal}
+.nav-logo b{font-size:15px;font-weight:800}.nav-logo b em{color:var(--green);font-style:normal}
 .nav-tag{font-family:var(--mono);font-size:10px;color:var(--green);background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);padding:2px 9px;border-radius:99px}
 .nav-right{display:flex;gap:8px;align-items:center}
 .nav-built{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.update-badge{font-size:11px;color:var(--yellow);background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.25);padding:4px 12px;border-radius:99px;cursor:pointer;display:none;align-items:center;gap:6px;transition:all .2s}
+.update-badge.visible{display:flex}.update-badge:hover{background:rgba(255,209,102,.15)}
 .nbtn{padding:7px 15px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;font-family:var(--sans);transition:all .2s;display:inline-flex;align-items:center;gap:6px;border:none}
 .nbtn-ghost{background:transparent;color:var(--muted2);border:1px solid var(--border)}.nbtn-ghost:hover{color:#fff;border-color:var(--muted2)}
-.nbtn-green{background:var(--green);color:#000}.nbtn-green:hover{background:var(--green2)}
-.nbtn-yellow{background:rgba(255,209,102,.1);color:var(--yellow);border:1px solid rgba(255,209,102,.25)}.nbtn-yellow:hover{background:rgba(255,209,102,.2)}
 
-/* Layout */
-.layout{max-width:1100px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;position:relative;z-index:1}
+.layout{max-width:1100px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:280px 1fr;gap:16px;position:relative;z-index:1}
 .span2{grid-column:1/-1}
 
-/* Cards */
 .card{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden}
-.card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-.card-header h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted2)}
-.card-icon{font-size:16px}
-.card-body{padding:20px}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.card-header h2{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted2);flex:1}
+.card-body{padding:18px}
 
-/* Fields */
-.field{margin-bottom:14px}.field:last-child{margin-bottom:0}
-.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px}
-.field input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:var(--sans);outline:none;transition:border-color .2s}
+/* Account list */
+.acc-list{display:flex;flex-direction:column;gap:6px;padding:10px}
+.acc-btn{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;border:none;background:transparent;color:var(--text);font-family:var(--sans);font-size:13px;width:100%;text-align:left;transition:all .2s;border:1px solid transparent}
+.acc-btn:hover{background:var(--s2);border-color:var(--border)}
+.acc-btn.active{background:rgba(0,229,160,.06);border-color:rgba(0,229,160,.2);color:var(--green)}
+.acc-avatar{width:30px;height:30px;border-radius:8px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.acc-info{flex:1;min-width:0}
+.acc-name{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acc-sched{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.acc-add{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;cursor:pointer;border:1px dashed var(--border);background:transparent;color:var(--muted);font-family:var(--sans);font-size:12px;width:100%;transition:all .2s;margin-top:4px}
+.acc-add:hover{border-color:var(--green);color:var(--green)}
+
+/* Form */
+.field{margin-bottom:13px}.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px}
+.field input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--sans);outline:none;transition:border-color .2s}
 .field input:focus{border-color:var(--green)}
 .field input::placeholder{color:var(--muted)}
 .field .hint{font-size:11px;color:var(--muted);margin-top:4px}
-
-/* Toggle */
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0}
-.toggle{position:relative;width:42px;height:24px;flex-shrink:0}
-.toggle input{opacity:0;width:0;height:0}
-.toggle-slider{position:absolute;inset:0;background:var(--border2);border-radius:99px;cursor:pointer;transition:.3s}
-.toggle-slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
-.toggle input:checked+.toggle-slider{background:var(--green)}
-.toggle input:checked+.toggle-slider::before{transform:translateX(18px)}
-
-/* Schedule grid */
-.sched-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}
+.field input.dimmed{color:var(--muted2)}
+.sched-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.divider{height:1px;background:var(--border);margin:14px 0}
 
 /* Buttons */
-.btn-row{display:flex;gap:10px;margin-top:4px}
 .btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:var(--sans);transition:all .2s;white-space:nowrap}
-.btn-primary{background:var(--green);color:#000;flex:1}.btn-primary:hover{background:var(--green2)}.btn-primary:disabled{background:#1a3d2e;color:#2a6b4a;cursor:not-allowed}
-.btn-secondary{background:var(--border2);color:var(--text)}.btn-secondary:hover{background:#2a3050}
+.btn-green{background:var(--green);color:#000;flex:1}.btn-green:hover{background:var(--green2)}
+.btn-green:disabled{background:#1a3d2e;color:#2a6b4a;cursor:not-allowed}
+.btn-ghost{background:var(--border2);color:var(--text)}.btn-ghost:hover{background:#2a3050}
+.btn-red{background:rgba(255,107,107,.1);color:var(--red);border:1px solid rgba(255,107,107,.2)}.btn-red:hover{background:rgba(255,107,107,.2)}
+.btn-row{display:flex;gap:8px;margin-top:4px}
+.save-note{font-size:12px;color:var(--green);margin-top:8px;min-height:18px;text-align:center;transition:opacity .3s}
 
-/* Status */
-.status-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+/* Run */
 .pulse{width:9px;height:9px;border-radius:50%;background:var(--border2);flex-shrink:0}
 .pulse.running{background:var(--green);animation:blink 1.2s infinite}
 .pulse.ok{background:var(--green)}.pulse.err{background:var(--red)}.pulse.info{background:var(--blue)}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
-.status-text{font-size:12px;color:var(--muted2)}
-.next-run{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
-
-/* Result */
-.result-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;min-height:38px;color:var(--muted2);transition:all .3s}
+.result-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 13px;font-size:13px;min-height:38px;color:var(--muted2);transition:all .3s}
 .result-box.ok{color:var(--green);border-color:rgba(0,229,160,.2)}
 .result-box.err{color:var(--red);border-color:rgba(255,107,107,.2)}
 .result-box.info{color:var(--blue);border-color:rgba(77,159,255,.2)}
-
-/* Log */
-.log-wrap{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;height:260px;overflow-y:auto;font-family:var(--mono);font-size:12px;line-height:1.75}
+.log-wrap{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;height:240px;overflow-y:auto;font-family:var(--mono);font-size:12px;line-height:1.75}
 .log-wrap::-webkit-scrollbar{width:4px}
 .log-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 .log-line{color:var(--muted);white-space:pre-wrap;word-break:break-all}
 .log-line.ok{color:var(--green)}.log-line.err{color:var(--red)}.log-line.warn{color:var(--yellow)}.log-line.info{color:var(--blue)}
 
-/* Update panel */
-.update-badge{font-size:11px;color:var(--yellow);background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.2);padding:4px 12px;border-radius:99px;cursor:pointer;transition:all .2s;display:none;align-items:center;gap:6px}
-.update-badge.visible{display:flex}.update-badge:hover{background:rgba(255,209,102,.15)}
-.update-panel{display:none;background:rgba(255,209,102,.04);border:1px solid rgba(255,209,102,.15);border-radius:10px;padding:16px;margin-top:12px}
-.update-panel.visible{display:block}
-.update-sha{font-family:var(--mono);font-size:11px}
+/* Update */
+.update-panel{background:rgba(255,209,102,.04);border:1px solid rgba(255,209,102,.15);border-radius:10px;padding:16px}
 .update-log-wrap{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;height:140px;overflow-y:auto;font-family:var(--mono);font-size:12px;line-height:1.75;margin-top:12px;display:none}
 
+/* Changelog */
+.cl-row{display:flex;gap:14px;padding:10px 18px;border-bottom:1px solid var(--border);font-size:12px}
+.cl-row:last-child{border-bottom:none}
+.cl-row.latest{background:rgba(0,229,160,.03)}
 
-/* Divider */
-.divider{height:1px;background:var(--border);margin:14px 0}
-
-/* Sched preview */
-.sched-preview{background:rgba(0,229,160,.04);border:1px solid rgba(0,229,160,.12);border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:var(--muted2)}
-
-@media(max-width:680px){.layout{grid-template-columns:1fr}.span2{grid-column:1}.sched-grid{grid-template-columns:1fr 1fr}.nav-built{display:none}}
+@media(max-width:768px){.layout{grid-template-columns:1fr}.span2{grid-column:1}}
 </style>
 </head>
 <body>
@@ -127,83 +116,51 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
 
 <div class="layout">
 
-  <!-- Credentials -->
-  <div class="card">
-    <div class="card-header"><span class="card-icon">🔐</span><h2>Credentials</h2></div>
-    <div class="card-body">
-      <div class="field">
-        <label>No-IP Email</label>
-        <input type="email" id="username" placeholder="you@gmail.com" value="{{ config.username }}">
+  <!-- Left: Account list -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <span>👤</span>
+        <h2>Accounts</h2>
       </div>
-      <div class="field">
-        <label>Password</label>
-        <input type="password" id="password" placeholder="••••••••" value="{{ config.password }}">
+      <div class="acc-list" id="accList">
+        <div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">Loading...</div>
       </div>
-      <div class="field">
-        <label>TOTP Key <span style="color:var(--muted);font-weight:400;text-transform:none">(optional — 2FA only)</span></label>
-        <input type="text" id="totp_key" placeholder="JBSWY3DPEHPK3PXP" value="{{ config.totp_key }}" autocomplete="off" style="font-family:var(--mono)">
-        <div class="hint">16-char key from No-IP 2FA setup. Leave empty if not using 2FA.</div>
-      </div>
-      <div class="divider"></div>
-      <div class="btn-row">
-        <button class="btn btn-secondary" onclick="saveConfig()">💾 Save config</button>
+      <div style="padding:0 10px 10px">
+        <button class="acc-add" onclick="newAccount()">＋ Add account</button>
       </div>
     </div>
   </div>
 
-  <!-- Schedule -->
+  <!-- Right: Form -->
   <div class="card">
-    <div class="card-header"><span class="card-icon">⏰</span><h2>Schedule</h2></div>
-    <div class="card-body">
-      <div class="toggle-row">
-        <span style="font-size:13px">Enable automatic schedule</span>
-        <label class="toggle">
-          <input type="checkbox" id="schedule_enabled" {% if config.schedule_enabled %}checked{% endif %} onchange="toggleSchedule()">
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-      <div id="schedOptions" style="{% if not config.schedule_enabled %}opacity:.4;pointer-events:none{% endif %}">
-        <div class="sched-grid">
-          <div class="field">
-            <label>GMT Offset</label>
-            <input type="number" id="gmt_offset" value="{{ config.gmt_offset }}" min="-12" max="14">
-            <div class="hint">7 = GMT+7 (VN)</div>
-          </div>
-          <div class="field">
-            <label>Every N days</label>
-            <input type="number" id="run_every_days" value="{{ config.run_every_days }}" min="1" max="30">
-            <div class="hint">1 = daily</div>
-          </div>
-          <div class="field">
-            <label>At hour (0–23)</label>
-            <input type="number" id="run_at_hour" value="{{ config.run_at_hour }}" min="0" max="23">
-            <div class="hint">Local time</div>
-          </div>
-        </div>
-        <div class="sched-preview" id="schedPreview">—</div>
-      </div>
-      <div class="divider"></div>
-      <div class="btn-row">
-        <button class="btn btn-secondary" onclick="saveSchedule()">💾 Save schedule</button>
+    <div class="card-header">
+      <span>⚙️</span>
+      <h2 id="formTitle">Select or add an account</h2>
+      <button class="nbtn nbtn-ghost" id="deleteBtn" style="display:none;color:var(--red);border-color:rgba(255,107,107,.3);padding:4px 10px;font-size:11px" onclick="deleteAccount()">🗑 Delete</button>
+    </div>
+    <div class="card-body" id="formBody">
+      <div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">
+        Select an account from the left, or click <strong style="color:var(--green)">＋ Add account</strong>
       </div>
     </div>
   </div>
 
   <!-- Run -->
   <div class="card span2">
-    <div class="card-header"><span class="card-icon">▶</span><h2>Run</h2></div>
+    <div class="card-header"><span>▶</span><h2>Run</h2></div>
     <div class="card-body">
-      <div class="status-row">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
         <div class="pulse" id="pulse"></div>
-        <span class="status-text" id="statusText">Ready</span>
-        <span class="next-run" id="nextRunText"></span>
+        <span style="font-size:12px;color:var(--muted2)" id="statusText">Ready</span>
+        <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)" id="nextRunText"></span>
       </div>
       <div class="result-box" id="resultBox">—</div>
       <div class="btn-row" style="margin-top:14px">
-        <button class="btn btn-primary" id="runBtn" onclick="runNow()">▶ Run Now</button>
+        <button class="btn btn-green" id="runBtn" onclick="runNow()">▶ Run All Now</button>
       </div>
       <div class="divider"></div>
-      <div class="status-row" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;margin-bottom:10px">
         <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Live Log</span>
         <button class="nbtn nbtn-ghost" style="padding:4px 12px;font-size:11px;margin-left:auto" onclick="clearLog()">Clear</button>
       </div>
@@ -216,178 +173,281 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
   <!-- Update -->
   <div class="card span2" id="updateCard">
     <div class="card-header">
-      <span class="card-icon">🔄</span>
-      <h2>Update</h2>
-      <span style="font-size:11px;color:var(--muted);margin-left:auto">Pulls from github.com/W00DFISH/noip-renewer-docker</span>
+      <span>🔄</span><h2>Update</h2>
+      <span style="font-size:11px;color:var(--muted);margin-left:auto">github.com/W00DFISH/noip-renewer-docker</span>
     </div>
     <div class="card-body">
-      <div id="updatePanel" class="update-panel visible">
-        <div id="updateInfo" style="font-size:13px;color:var(--muted2)">Click "🔍 Check for update" to check for new versions.</div>
+      <div class="update-panel">
+        <div id="updateInfo" style="font-size:13px;color:var(--muted2)">Click "🔍 Check update" to check for new versions.</div>
         <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-secondary" onclick="checkUpdate()" id="checkBtn">🔍 Check for update</button>
+          <button class="btn btn-ghost" id="checkBtn" onclick="checkUpdate()">🔍 Check for update</button>
           <button class="btn" id="updateNowBtn" style="background:rgba(255,209,102,.1);color:var(--yellow);border:1px solid rgba(255,209,102,.25);display:none" onclick="doUpdate()">⬇️ Update Now</button>
+          <button class="nbtn nbtn-ghost" id="resetBtn" style="display:none;color:var(--red);border-color:rgba(255,107,107,.3)" onclick="resetUpdate()">↺ Reset stuck</button>
           <button class="nbtn nbtn-ghost" onclick="window.open('https://github.com/W00DFISH/noip-renewer-docker','_blank')">🔗 GitHub</button>
-          <button class="nbtn nbtn-ghost" id="resetBtn" style="color:var(--red);border-color:rgba(255,107,107,.3);display:none" onclick="resetUpdate()">↺ Reset stuck</button>
         </div>
       </div>
       <div class="update-log-wrap" id="updateLogBox"></div>
     </div>
   </div>
 
+  <!-- Commit Log -->
+  <div class="card span2">
+    <div class="card-header"><span>📋</span><h2>Commit Log</h2>
+      <span style="font-size:11px;color:var(--muted);margin-left:auto">Auto-loaded from GitHub · GMT+7</span>
+    </div>
+    <div id="changelogBox" style="font-size:12px">
+      <div style="padding:14px 18px;color:var(--muted)">Loading...</div>
+    </div>
+  </div>
+
 </div>
 
 <script>
-let polling = null, updatePolling = null;
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+let currentAccId = null;
+let polling = null;
 
-// ── Config ────────────────────────────────────────────────────────────────────
-async function saveConfig(){
-  const data={username:document.getElementById('username').value.trim(),
-    password:document.getElementById('password').value.trim(),
-    totp_key:document.getElementById('totp_key').value.trim()};
-  await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-  const btn=document.querySelector('#updateCard').previousElementSibling.previousElementSibling.querySelector('.btn-secondary');
-  flashBtn('.card-body .btn-secondary','✓ Saved!','💾 Save config');
+// ── Account List ──────────────────────────────────────────────────────────────
+async function loadAccounts(){
+  const r = await fetch('/api/accounts');
+  const d = await r.json();
+  renderAccList(d.accounts || []);
 }
-async function saveSchedule(){
-  const data={schedule_enabled:document.getElementById('schedule_enabled').checked,
-    gmt_offset:+document.getElementById('gmt_offset').value||7,
-    run_every_days:+document.getElementById('run_every_days').value||1,
-    run_at_hour:+document.getElementById('run_at_hour').value||9};
-  await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+
+function renderAccList(accounts){
+  const box = document.getElementById('accList');
+  if(!accounts.length){
+    box.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--muted);text-align:center">No accounts yet</div>';
+    return;
+  }
+  box.innerHTML = accounts.map(a => {
+    const h12 = a.run_at_hour === 0 ? '12 AM' : a.run_at_hour < 12 ? `${a.run_at_hour} AM` : a.run_at_hour === 12 ? '12 PM' : `${a.run_at_hour-12} PM`;
+    const name = a.username.split('@')[0];
+    return `<button class="acc-btn ${a.id===currentAccId?'active':''}" onclick="loadAccount('${a.id}')">
+      <div class="acc-avatar">👤</div>
+      <div class="acc-info">
+        <div class="acc-name">${esc(a.username)}</div>
+        <div class="acc-sched">Every ${a.run_every_days}d · ${h12} GMT+${a.gmt_offset}</div>
+      </div>
+    </button>`;
+  }).join('');
+}
+
+async function loadAccount(id){
+  currentAccId = id;
+  const r = await fetch(`/api/account/${id}`);
+  const d = await r.json();
+  if(!d.ok) return;
+  const a = d.account;
+  showForm(a);
+  // Refresh list to update active state
+  loadAccounts();
+}
+
+function newAccount(){
+  currentAccId = null;
+  showForm(null);
+  document.getElementById('accList').querySelectorAll('.acc-btn').forEach(b=>b.classList.remove('active'));
+}
+
+function showForm(acc){
+  const isNew = !acc;
+  document.getElementById('formTitle').textContent = isNew ? 'New Account' : acc.username;
+  document.getElementById('deleteBtn').style.display = isNew ? 'none' : 'flex';
+
+  document.getElementById('formBody').innerHTML = `
+    <div class="field">
+      <label>No-IP Email</label>
+      <input type="email" id="f_username" placeholder="you@gmail.com" value="${esc(acc?.username||'')}">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="f_password" placeholder="••••••••" value="${esc(acc?.password||'')}">
+    </div>
+    <div class="field">
+      <label>TOTP Key <span style="color:var(--muted);font-weight:400;text-transform:none">(optional — 2FA only)</span></label>
+      <input type="text" id="f_totp" placeholder="JBSWY3DPEHPK3PXP" value="${esc(acc?.totp_key||'')}" autocomplete="off" style="font-family:var(--mono)">
+      <div class="hint">16-char key from No-IP 2FA setup.</div>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px">Auto Schedule</div>
+    <div class="sched-row">
+      <div class="field">
+        <label>GMT Offset</label>
+        <input type="number" id="f_gmt" value="${acc?.gmt_offset??7}" min="-12" max="14">
+        <div class="hint">7 = Vietnam</div>
+      </div>
+      <div class="field">
+        <label>Every N days</label>
+        <input type="number" id="f_days" value="${acc?.run_every_days??1}" min="1" max="30">
+        <div class="hint">1 = daily</div>
+      </div>
+      <div class="field">
+        <label>At hour (0–23)</label>
+        <input type="number" id="f_hour" value="${acc?.run_at_hour??9}" min="0" max="23">
+        <div class="hint">Local time</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted2);margin-bottom:14px" id="schedPreview"></div>
+    <div class="btn-row">
+      <button class="btn btn-green" onclick="saveAccount()">💾 Save</button>
+    </div>
+    <div class="save-note" id="saveNote"></div>
+  `;
+
   updateSchedPreview();
-  flashBtn('#schedOptions .btn-secondary','✓ Saved!','💾 Save schedule');
+  ['f_gmt','f_days','f_hour'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', updateSchedPreview);
+  });
 }
-function flashBtn(sel,msg,orig){
-  const b=document.querySelector(sel);if(!b)return;
-  b.textContent=msg;setTimeout(()=>b.textContent=orig,1500);
-}
-function toggleSchedule(){
-  const on=document.getElementById('schedule_enabled').checked;
-  document.getElementById('schedOptions').style.cssText=on?'':'opacity:.4;pointer-events:none';
-  updateSchedPreview();
-}
+
 function updateSchedPreview(){
-  const on=document.getElementById('schedule_enabled').checked;
-  const h=+document.getElementById('run_at_hour').value||9;
-  const d=+document.getElementById('run_every_days').value||1;
-  const g=+document.getElementById('gmt_offset').value||7;
-  const sign=g>=0?'+':'';
-  const h12=h===0?'12 AM':h<12?`${h} AM`:h===12?'12 PM':`${h-12} PM`;
-  document.getElementById('schedPreview').textContent=
-    on?`Runs every ${d} day(s) at ${h12} (GMT${sign}${g})`:'Schedule disabled';
+  const h = +document.getElementById('f_hour')?.value || 9;
+  const d = +document.getElementById('f_days')?.value || 1;
+  const g = +document.getElementById('f_gmt')?.value || 7;
+  const sign = g >= 0 ? '+' : '';
+  const h12 = h===0?'12 AM':h<12?`${h} AM`:h===12?'12 PM':`${h-12} PM`;
+  const el = document.getElementById('schedPreview');
+  if(el) el.textContent = `⏰ Runs every ${d} day(s) at ${h12} (GMT${sign}${g})`;
+}
+
+async function saveAccount(){
+  const data = {
+    id:             currentAccId || undefined,
+    username:       document.getElementById('f_username').value.trim(),
+    password:       document.getElementById('f_password').value.trim(),
+    totp_key:       document.getElementById('f_totp').value.trim(),
+    gmt_offset:     +document.getElementById('f_gmt').value || 7,
+    run_every_days: +document.getElementById('f_days').value || 1,
+    run_at_hour:    +document.getElementById('f_hour').value || 9,
+  };
+  if(!data.username || !data.password){ alert('Email and password are required.'); return; }
+
+  const r = await fetch('/api/account/save', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+  const d = await r.json();
+  if(!d.ok){ alert('Error saving'); return; }
+
+  // Show success, dim fields
+  const note = document.getElementById('saveNote');
+  note.textContent = '✓ Saved to system';
+  note.style.opacity = '1';
+  setTimeout(() => { note.style.opacity = '0'; }, 2000);
+
+  // Update account list
+  renderAccList(d.accounts);
+
+  // If new account, set current ID
+  if(!currentAccId && d.accounts.length){
+    const saved = d.accounts.find(a => a.username === data.username);
+    if(saved){ currentAccId = saved.id; }
+  }
+
+  // Clear form to defaults (keep filled so user sees what was saved)
+  document.getElementById('formTitle').textContent = data.username;
+  document.getElementById('deleteBtn').style.display = 'flex';
+}
+
+async function deleteAccount(){
+  if(!currentAccId) return;
+  if(!confirm('Delete this account?')) return;
+  await fetch('/api/account/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:currentAccId})});
+  currentAccId = null;
+  document.getElementById('formTitle').textContent = 'Select or add an account';
+  document.getElementById('deleteBtn').style.display = 'none';
+  document.getElementById('formBody').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">Account deleted.</div>';
+  loadAccounts();
 }
 
 // ── Run ───────────────────────────────────────────────────────────────────────
 async function runNow(){
-  const r=await fetch('/api/run',{method:'POST'});
-  const d=await r.json();
-  if(!d.ok){alert(d.error);return;}
-  document.getElementById('logBox').innerHTML='';
-  setRunning(true);startPolling();
+  const r = await fetch('/api/run', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({})});
+  const d = await r.json();
+  if(!d.ok){ alert(d.error); return; }
+  document.getElementById('logBox').innerHTML = '';
+  setRunning(true); startPolling();
 }
 function setRunning(running){
-  const btn=document.getElementById('runBtn');
-  const p=document.getElementById('pulse');
-  btn.disabled=running;
-  btn.textContent=running?'⏳ Running...':'▶ Run Now';
-  p.className='pulse'+(running?' running':'');
-  if(running)document.getElementById('statusText').textContent='Running...';
+  const btn = document.getElementById('runBtn');
+  const p   = document.getElementById('pulse');
+  btn.disabled = running;
+  btn.textContent = running ? '⏳ Running...' : '▶ Run All Now';
+  p.className = 'pulse' + (running ? ' running' : '');
+  if(running) document.getElementById('statusText').textContent = 'Running...';
 }
 function setResult(raw){
-  const[type,...parts]=raw.split('|');
-  const msg=parts.join('|');
-  const box=document.getElementById('resultBox');
-  box.textContent=msg;
-  box.className='result-box '+(type==='success'?'ok':type==='error'?'err':'info');
+  const [type,...parts] = raw.split('|');
+  const msg = parts.join('|');
+  const box = document.getElementById('resultBox');
+  box.textContent = msg; box.className = 'result-box ' + (type==='success'?'ok':type==='error'?'err':'info');
   if(!document.getElementById('runBtn').disabled)
-    document.getElementById('pulse').className='pulse '+(type==='success'?'ok':type==='error'?'err':'info');
+    document.getElementById('pulse').className = 'pulse ' + (type==='success'?'ok':type==='error'?'err':'info');
 }
 function renderLog(logs){
-  if(!logs.length)return;
-  const box=document.getElementById('logBox');
-  box.innerHTML=logs.map(line=>{
+  if(!logs.length) return;
+  const box = document.getElementById('logBox');
+  box.innerHTML = logs.map(l=>{
     let c='log-line';
-    if(line.includes('✅')||line.includes('✓'))c+=' ok';
-    else if(line.includes('❌')||line.includes('Fatal')||line.includes('Error'))c+=' err';
-    else if(line.includes('⚠️'))c+=' warn';
-    else if(line.includes('🔐')||line.includes('🔑')||line.includes('📋')||line.includes('🚀')||line.includes('ℹ️'))c+=' info';
-    return`<div class="${c}">${esc(line)}</div>`;
+    if(l.includes('✅')||l.includes('✓')) c+=' ok';
+    else if(l.includes('❌')||l.includes('Fatal')||l.includes('Error')) c+=' err';
+    else if(l.includes('⚠️')) c+=' warn';
+    else if(l.includes('🔐')||l.includes('🔑')||l.includes('📋')||l.includes('🚀')||l.includes('ℹ️')) c+=' info';
+    return `<div class="${c}">${esc(l)}</div>`;
   }).join('');
-  box.scrollTop=box.scrollHeight;
+  box.scrollTop = box.scrollHeight;
 }
-function clearLog(){document.getElementById('logBox').innerHTML='<div class="log-line" style="color:var(--border2)">Cleared.</div>';}
+function clearLog(){ document.getElementById('logBox').innerHTML = '<div class="log-line" style="color:var(--border2)">Cleared.</div>'; }
 function startPolling(){
-  if(polling)clearInterval(polling);
-  polling=setInterval(async()=>{
+  if(polling) clearInterval(polling);
+  polling = setInterval(async()=>{
     try{
-      const r=await fetch('/api/status');const d=await r.json();
+      const r = await fetch('/api/status'); const d = await r.json();
       renderLog(d.logs);
-      if(d.last_result)setResult(d.last_result);
-      if(d.last_run)document.getElementById('statusText').textContent='Last run: '+d.last_run;
-      if(d.next_run)document.getElementById('nextRunText').textContent='⏰ Next: '+d.next_run;
-      if(!d.running){setRunning(false);clearInterval(polling);}
+      if(d.last_result) setResult(d.last_result);
+      if(d.last_run) document.getElementById('statusText').textContent = 'Last run: ' + d.last_run;
+      if(!d.running){ setRunning(false); clearInterval(polling); }
     }catch(e){}
-  },1500);
+  }, 1500);
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
-function scrollToUpdate(){
-  document.getElementById('updateCard').scrollIntoView({behavior:'smooth',block:'start'});
-}
+function scrollToUpdate(){ document.getElementById('updateCard').scrollIntoView({behavior:'smooth',block:'start'}); }
+
 async function checkUpdate(){
-  const btn = document.getElementById('checkBtn') || document.querySelector('[onclick="checkUpdate()"]');
-  const origText = btn ? btn.textContent : '';
-  if(btn){ btn.textContent='⏳ Checking...'; btn.disabled=true; }
-
+  const btn = document.getElementById('checkBtn');
+  btn.textContent = '⏳ Checking...'; btn.disabled = true;
+  document.getElementById('updateNowBtn').style.display = 'none';
   try{
-    const r = await fetch('/api/check_update');
-    const d = await r.json();
-    if(btn){ btn.textContent=origText; btn.disabled=false; }
+    const r = await fetch('/api/check_update'); const d = await r.json();
+    btn.textContent = '🔍 Check for update'; btn.disabled = false;
     if(!d.ok){ alert('Could not check:\n' + d.error); return; }
-
     if(d.has_update){
-      // Show badge + info, reveal Update Now button — do NOT auto-run
       document.getElementById('updateBadge').classList.add('visible');
       document.getElementById('updateNowBtn').style.display = 'flex';
       document.getElementById('updateInfo').innerHTML =
         `<strong style="color:var(--yellow)">⚠️ New version available!</strong><br><br>`+
         `<table style="font-size:13px;border-collapse:collapse">`+
-        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">Your version</td>`+
-        `<td style="color:var(--red);font-weight:700">${esc(d.current_version||'unknown')}</td>`+
-        `<td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">(${esc(d.current)})</td></tr>`+
-        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">Latest</td>`+
-        `<td style="color:var(--green);font-weight:700">v${esc(d.latest_version||'?')}</td>`+
-        `<td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">(${esc(d.latest)})</td></tr>`+
-        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">What's new</td>`+
-        `<td colspan="2" style="color:var(--text);font-style:italic">${esc(d.message)}</td></tr>`+
-        `</table><br>`+
-        `Click <strong style="color:var(--yellow)">⬇️ Update Now</strong> to install.`;
+        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">Your version</td><td style="color:var(--red);font-weight:700">${esc(d.current_version||'?')}</td><td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">(${esc(d.current)})</td></tr>`+
+        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">Latest</td><td style="color:var(--green);font-weight:700">v${esc(d.latest_version||'?')}</td><td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">(${esc(d.latest)})</td></tr>`+
+        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">What's new</td><td colspan="2" style="color:var(--text);font-style:italic">${esc(d.message)}</td></tr>`+
+        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">Date</td><td colspan="2" style="color:var(--muted2)">${esc(d.date)}</td></tr>`+
+        `</table>`;
       scrollToUpdate();
     } else {
       document.getElementById('updateBadge').classList.remove('visible');
-      document.getElementById('updateNowBtn').style.display = 'none';
       document.getElementById('updateInfo').innerHTML =
-        `<span style="color:var(--green)">✅ Already up to date!</span> `+
-        `<span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${esc(d.current_version||'')} (${esc(d.current)})</span>`;
+        `<span style="color:var(--green)">✅ Already up to date!</span> <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${esc(d.current_version||'')} (${esc(d.current)})</span>`;
     }
-  }catch(e){
-    if(btn){ btn.textContent=origText; btn.disabled=false; }
-    alert('Error: '+e);
-  }
+  }catch(e){ btn.textContent='🔍 Check for update'; btn.disabled=false; alert('Error: '+e); }
 }
 
-// ── Do Update ─────────────────────────────────────────────────────────────────
 async function resetUpdate(){
-  await fetch('/api/update_reset', {method:'POST'});
+  await fetch('/api/update_reset',{method:'POST'});
   document.getElementById('resetBtn').style.display='none';
-  document.getElementById('checkBtn').disabled=false;
-  document.getElementById('updateNowBtn').disabled=false;
-  document.getElementById('updateInfo').innerHTML='<span style="color:var(--green)">✅ State reset. You can try again.</span>';
+  document.getElementById('updateInfo').innerHTML='<span style="color:var(--green)">✅ Reset done. Try again.</span>';
 }
 
 async function doUpdate(){
-  // Show fullscreen overlay — blocks all interaction
   let overlay = document.createElement('div');
   overlay.id = 'updateOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(8,11,18,.95);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:Syne,sans-serif';
@@ -397,93 +457,85 @@ async function doUpdate(){
     <div id="ovMsg" style="font-size:14px;color:#5a6080;max-width:480px;text-align:center;line-height:1.65">Building new image from GitHub. Please wait.</div>
     <div id="ovCount" style="display:none;font-size:72px;font-weight:900;color:#00e5a0;font-family:'JetBrains Mono',monospace;line-height:1"></div>
     <div id="ovLog" style="background:#04060c;border:1px solid #1e2438;border-radius:10px;padding:14px;width:560px;max-width:90vw;height:180px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.75;text-align:left"></div>
-    <div style="font-size:12px;color:#5a6080">⚠️ Do not close this tab</div>
-  `;
+    <div style="font-size:12px;color:#5a6080">⚠️ Do not close this tab</div>`;
   document.body.appendChild(overlay);
   window.onbeforeunload = () => 'Update is in progress!';
 
-  const r = await fetch('/api/update', {method:'POST'});
+  const r = await fetch('/api/update',{method:'POST'});
   const d = await r.json();
-  if(!d.ok){
-    if(d.error === 'already_running'){
-      document.getElementById('ovTitle').textContent = '⏳ Update in progress...';
-      document.getElementById('ovMsg').textContent = 'An update is already running.';
-    } else {
-      document.body.removeChild(overlay);
-      window.onbeforeunload = null;
-      if(confirm('Error: ' + d.error + '\n\nReset update state and try again?')){
-        await fetch('/api/update_reset', {method:'POST'});
-      }
-      return;
-    }
+  if(!d.ok && d.error !== 'already_running'){
+    document.body.removeChild(overlay); window.onbeforeunload=null;
+    if(confirm('Error: '+d.error+'\n\nReset and try again?')) await fetch('/api/update_reset',{method:'POST'});
+    return;
   }
 
   let doneTriggered = false;
   function startCountdown(){
-    if(doneTriggered) return;
-    doneTriggered = true;
-    clearInterval(poll);
-    window.onbeforeunload = null;
-    document.getElementById('ovTitle').textContent = '✅ Done!';
-    document.getElementById('ovMsg').textContent = 'Container restarting — page reloads automatically.';
-    const cdEl = document.getElementById('ovCount');
-    cdEl.style.display = 'block';
-    let n = 15; cdEl.textContent = n;
-    const cd = setInterval(()=>{ n--; cdEl.textContent = n; if(n<=0){ clearInterval(cd); location.reload(); }}, 1000);
+    if(doneTriggered) return; doneTriggered=true; clearInterval(poll);
+    window.onbeforeunload=null;
+    document.getElementById('ovTitle').textContent='✅ Done!';
+    document.getElementById('ovMsg').textContent='Container restarting — page reloads automatically.';
+    const cdEl=document.getElementById('ovCount'); cdEl.style.display='block';
+    let n=15; cdEl.textContent=n;
+    const cd=setInterval(()=>{n--;cdEl.textContent=n;if(n<=0){clearInterval(cd);location.reload();}},1000);
   }
 
-  const poll = setInterval(async()=>{
+  const poll=setInterval(async()=>{
     try{
-      const r2 = await fetch('/api/update_status');
-      const d2 = await r2.json();
+      const r2=await fetch('/api/update_status'); const d2=await r2.json();
       if(d2.logs.length){
-        const box = document.getElementById('ovLog');
-        if(box){
-          box.innerHTML = d2.logs.map(l=>{
-            let c='#5a6080';
-            if(l.includes('[OK]')||l.includes('Done')||l.includes('complete')||l.includes('restarting')) c='#00e5a0';
-            else if(l.includes('[ERROR]')) c='#ff6b6b';
-            else if(l.includes('===')) c='#4d9fff';
-            return `<div style="color:${c}">${esc(l)}</div>`;
-          }).join('');
-          box.scrollTop = box.scrollHeight;
-        }
+        const box=document.getElementById('ovLog');
+        if(box){ box.innerHTML=d2.logs.map(l=>{
+          let c='#5a6080';
+          if(l.includes('[OK]')||l.includes('Done')||l.includes('restarting')) c='#00e5a0';
+          else if(l.includes('[ERROR]')) c='#ff6b6b';
+          else if(l.includes('===')) c='#4d9fff';
+          return `<div style="color:${c}">${esc(l)}</div>`;
+        }).join(''); box.scrollTop=box.scrollHeight; }
       }
       if(d2.logs.some(l=>l.includes('[OK]'))){ startCountdown(); }
-      else if(!d2.running){ clearInterval(poll); document.body.removeChild(overlay); window.onbeforeunload=null; alert('Update failed.'); }
-    } catch(e){
-      const box = document.getElementById('ovLog');
-      if(box) box.innerHTML += `<div style="color:#4d9fff">[INFO] Container restarting...</div>`;
-      startCountdown();
-    }
-  }, 1500);
+      else if(!d2.running){ document.body.removeChild(overlay); window.onbeforeunload=null; clearInterval(poll); alert('Update failed.'); }
+    }catch(e){ startCountdown(); }
+  },1500);
+}
+
+// ── Changelog ─────────────────────────────────────────────────────────────────
+async function loadChangelog(){
+  try{
+    const r=await fetch('/api/changelog'); const d=await r.json();
+    const box=document.getElementById('changelogBox');
+    if(!d.ok||!d.entries.length){ box.innerHTML='<div style="padding:14px 18px;color:var(--muted)">Could not load.</div>'; return; }
+    box.innerHTML=d.entries.map((e,i)=>`
+      <div class="cl-row ${i===0?'latest':''}">
+        <span style="color:var(--muted);min-width:155px;flex-shrink:0">${esc(e.date)}</span>
+        <span style="color:var(--purple);flex-shrink:0;margin-right:8px">${esc(e.sha)}</span>
+        <span style="color:${i===0?'var(--green)':'var(--text)'};flex:1">${esc(e.message)}${i===0?' <span style="font-size:10px;color:var(--green);background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);padding:1px 7px;border-radius:4px;margin-left:6px">latest</span>':''}</span>
+      </div>`).join('');
+  }catch(e){ document.getElementById('changelogBox').innerHTML='<div style="padding:14px 18px;color:var(--muted)">Could not load.</div>'; }
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async()=>{
-  updateSchedPreview();
-  ['gmt_offset','run_every_days','run_at_hour'].forEach(id=>
-    document.getElementById(id).addEventListener('input',updateSchedPreview));
+  loadAccounts();
+  loadChangelog();
+
+  // Status
   try{
-    const r=await fetch('/api/status');const d=await r.json();
-    if(d.logs.length)renderLog(d.logs);
-    if(d.last_result)setResult(d.last_result);
-    if(d.last_run)document.getElementById('statusText').textContent='Last run: '+d.last_run;
-    if(d.next_run)document.getElementById('nextRunText').textContent='⏰ Next: '+d.next_run;
-    if(d.running){setRunning(true);startPolling();}
+    const r=await fetch('/api/status'); const d=await r.json();
+    if(d.logs.length) renderLog(d.logs);
+    if(d.last_result) setResult(d.last_result);
+    if(d.last_run) document.getElementById('statusText').textContent='Last run: '+d.last_run;
+    if(d.running){ setRunning(true); startPolling(); }
   }catch(e){}
-  // Auto-check update on load — show badge only, never auto-run
+
+  // Silent update check
   try{
-    const ru=await fetch('/api/update_status');const du=await ru.json();
-    if(du.running){
-      document.getElementById('resetBtn').style.display='inline-flex';
-      document.getElementById('updateInfo').innerHTML=
-        '<span style="color:var(--yellow)">⚠️ An update appears to be running (or stuck). Click ↺ Reset stuck to clear.</span>';
-    }
+    const ru=await fetch('/api/update_status'); const du=await ru.json();
+    if(du.running){ document.getElementById('resetBtn').style.display='inline-flex'; }
   }catch(e){}
-  // Silent update check — only show badge if available
+
   try{
-    const rc=await fetch('/api/check_update');const dc=await rc.json();
+    const rc=await fetch('/api/check_update'); const dc=await rc.json();
     if(dc.ok && dc.has_update){
       document.getElementById('updateBadge').classList.add('visible');
       document.getElementById('updateNowBtn').style.display='flex';
@@ -492,30 +544,7 @@ async function doUpdate(){
         `<span style="font-size:13px;color:var(--muted2)">Click ⬇️ Update Now to install.</span>`;
     }
   }catch(e){}
-  // Load commit log
-  loadChangelog();
 })();
-
-async function loadChangelog(){
-  try{
-    const r = await fetch('/api/changelog');
-    const d = await r.json();
-    const box = document.getElementById('changelogBox');
-    if(!d.ok||!d.entries.length){
-      box.innerHTML='<div style="padding:14px 20px;color:var(--muted)">Could not load: '+(d.error||'no entries')+'</div>';
-      return;
-    }
-    box.innerHTML = d.entries.map((e,i)=>`
-      <div style="display:flex;gap:16px;padding:10px 20px;border-bottom:1px solid var(--border);align-items:flex-start;${i===0?'background:rgba(0,229,160,.03)':''}">
-        <span style="color:var(--muted);font-size:11px;flex-shrink:0;min-width:155px">${esc(e.date)}</span>
-        <span style="color:var(--purple);font-size:11px;flex-shrink:0">${esc(e.sha)}</span>
-        <span style="color:${i===0?'var(--green)':'var(--text)'};flex:1">${esc(e.message)}${i===0?' <span style="font-size:10px;color:var(--green);background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);padding:1px 7px;border-radius:4px;margin-left:6px">latest</span>':''}</span>
-      </div>`).join('');
-  }catch(e){
-    document.getElementById('changelogBox').innerHTML=
-      '<div style="padding:14px 20px;color:var(--muted)">Could not load commit log.</div>';
-  }
-}
 </script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""No-IP Renewer Web App v2 — Flask + APScheduler + Playwright"""
+"""No-IP Renewer Web App — Multi-account edition"""
 
-import os, re, time, json, threading, logging, urllib.request
+import os, re, time, json, threading, logging, urllib.request, base64
 from datetime import datetime, timezone, timedelta
 from flask import Flask, render_template, request, jsonify
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -16,31 +16,23 @@ scheduler.start()
 
 CONFIG_FILE   = "/data/config.json"
 UPSTREAM_REPO = "W00DFISH/noip-renewer-docker"
+GMT7          = timezone(timedelta(hours=7))
 
-run_logs   = []
-run_status = {"running": False, "last_run": None, "last_result": None}
+run_logs       = []
+run_status     = {"running": False, "last_run": None, "last_result": None}
+update_logs    = []
+update_running = False
 
 # ── Config ─────────────────────────────────────────────────────────────────────
-DEFAULT_CONFIG = {
-    "username":         "",
-    "password":         "",
-    "totp_key":         "",
-    "schedule_enabled": False,
-    "run_every_days":   1,
-    "run_at_hour":      9,
-    "gmt_offset":       7,
-    "current_sha":      "",
-    "current_version":  "",
-}
-
 def load_config():
     try:
         cfg = json.load(open(CONFIG_FILE))
-        for k, v in DEFAULT_CONFIG.items():
-            cfg.setdefault(k, v)
+        cfg.setdefault("accounts", [])
+        cfg.setdefault("current_sha", "")
+        cfg.setdefault("current_version", "")
         return cfg
     except Exception:
-        return dict(DEFAULT_CONFIG)
+        return {"accounts": [], "current_sha": "", "current_version": ""}
 
 def save_config(cfg):
     os.makedirs("/data", exist_ok=True)
@@ -49,37 +41,17 @@ def save_config(cfg):
 
 # ── Version ────────────────────────────────────────────────────────────────────
 def get_version():
-    try:
-        return open("/app/VERSION").read().strip()
-    except Exception:
-        return "unknown"
+    try: return open("/app/VERSION").read().strip()
+    except: return "unknown"
 
 def get_build_time():
     try:
-        gmt7 = timezone(timedelta(hours=7))
-        ts   = os.path.getmtime("/app/VERSION")
-        return datetime.fromtimestamp(ts, tz=gmt7).strftime("%Y-%m-%d %H:%M:%S GMT+7")
-    except Exception:
-        return "unknown"
+        ts = os.path.getmtime("/app/VERSION")
+        return datetime.fromtimestamp(ts, tz=GMT7).strftime("%Y-%m-%d %H:%M:%S GMT+7")
+    except: return "unknown"
 
 APP_VERSION = get_version()
 APP_BUILT   = get_build_time()
-
-def init_sha():
-    """On first start, detect current SHA from GitHub if not saved."""
-    cfg = load_config()
-    if cfg.get("current_sha"):
-        return  # already set
-    try:
-        data = github_get("commits/main")
-        sha  = data["sha"][:7]
-        ver  = get_version()
-        cfg["current_sha"]      = sha
-        cfg["current_version"]  = ver
-        save_config(cfg)
-        log.info(f"Initialized SHA: {sha} v{ver}")
-    except Exception as e:
-        log.warning(f"Could not init SHA: {e}")
 
 # ── GitHub API ─────────────────────────────────────────────────────────────────
 def github_get(path):
@@ -88,58 +60,16 @@ def github_get(path):
     with urllib.request.urlopen(req, timeout=10) as r:
         return json.loads(r.read())
 
-def get_latest_commit():
-    data = github_get("commits/main")
-    return {
-        "sha":     data["sha"][:7],
-        "message": data["commit"]["message"].split("\n")[0][:100],
-        "date":    data["commit"]["author"]["date"][:10],
-        "version": None,
-    }
-
-def get_commits(limit=15):
-    commits = github_get(f"commits?per_page={limit}")
-    return [{"sha": c["sha"][:7],
-             "message": c["commit"]["message"].split("\n")[0][:100],
-             "date": c["commit"]["author"]["date"][:10]}
-            for c in commits]
-
 # ── Logging ────────────────────────────────────────────────────────────────────
 def add_log(msg):
-    gmt7 = timezone(timedelta(hours=7))
-    ts   = datetime.now(gmt7).strftime("%H:%M:%S")
+    ts = datetime.now(GMT7).strftime("%H:%M:%S")
     run_logs.append(f"[{ts}] {msg}")
-    if len(run_logs) > 300:
-        run_logs.pop(0)
+    if len(run_logs) > 300: run_logs.pop(0)
 
-# ── Playwright renew ───────────────────────────────────────────────────────────
-def do_renew(cfg=None):
-    global run_status
-    if run_status["running"]:
-        return
-    if cfg is None:
-        cfg = load_config()
-
-    username = cfg.get("username", "")
-    password = cfg.get("password", "")
-    totp_key = cfg.get("totp_key", "")
-
-    if not username or not password:
-        add_log("❌ Missing username or password.")
-        return
-
-    run_logs.clear()
-    gmt7 = timezone(timedelta(hours=7))
-    run_status.update({
-        "running":     True,
-        "last_run":    datetime.now(gmt7).strftime("%Y-%m-%d %H:%M:%S GMT+7"),
-        "last_result": None,
-    })
-
+# ── Playwright: renew single account ───────────────────────────────────────────
+def renew_account(username, password, totp_key):
     try:
         from playwright.sync_api import sync_playwright, TimeoutError as PWT
-
-        add_log("🚀 Starting browser...")
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True, args=["--no-sandbox","--disable-dev-shm-usage"])
@@ -149,7 +79,7 @@ def do_renew(cfg=None):
             )
             page = context.new_page()
 
-            add_log("🔐 Logging in...")
+            add_log(f"🔐 Logging in as {username}...")
             page.goto("https://www.noip.com/login?ref_url=console", wait_until="networkidle", timeout=30_000)
             page.fill("#username", username)
             page.fill("#password", password)
@@ -167,10 +97,25 @@ def do_renew(cfg=None):
                 import pyotp
                 code = pyotp.TOTP(totp_key).now()
                 add_log(f"TOTP code: {code}")
-                challenge = page.locator("#challenge_code").first
-                challenge.click()
-                page.keyboard.type(code, delay=50)
-                page.click('button[name="submit"]', timeout=10_000)
+
+                digit_inputs = [d for d in page.locator('input[type="number"], input[type="tel"]').all() if d.is_visible()]
+                if len(digit_inputs) >= 6:
+                    add_log("Typing into 6 digit inputs...")
+                    for i, digit in enumerate(code):
+                        digit_inputs[i].click()
+                        digit_inputs[i].fill(digit)
+                        time.sleep(0.1)
+                else:
+                    add_log("Typing full code...")
+                    first = page.locator('input[type="number"], input[type="tel"]').first
+                    first.click()
+                    page.keyboard.type(code, delay=100)
+
+                try: page.click('button[name="submit"]', timeout=5_000)
+                except:
+                    try: page.click('button[type="submit"]', timeout=5_000)
+                    except: page.keyboard.press("Enter")
+
                 try: page.wait_for_load_state("networkidle", timeout=15_000)
                 except: pass
                 add_log(f"Post-2FA: {page.url}")
@@ -182,20 +127,14 @@ def do_renew(cfg=None):
                 add_log("📋 Loading DNS records...")
                 page.goto("https://my.noip.com/dns/records", wait_until="networkidle", timeout=30_000)
                 time.sleep(2)
-
                 if "login" in page.url:
                     raise RuntimeError("Session lost")
-
                 try: page.locator("#zone-collection-wrapper").wait_for(timeout=15_000)
-                except PWT:
-                    add_log("No zone wrapper.")
-                    break
+                except PWT: add_log("No zone wrapper."); break
 
                 banners = page.locator('[id^="expiration-banner-hostname-"]').all()
                 add_log(f"Found {len(banners)} host(s) needing confirmation.")
-                if not banners:
-                    add_log("✅ All good — nothing to confirm!")
-                    break
+                if not banners: add_log("✅ All good!"); break
 
                 host = banners[0]
                 host_name = "unknown"
@@ -206,66 +145,104 @@ def do_renew(cfg=None):
 
                 add_log(f"[{host_name}] Confirming...")
                 confirmed = False
-
                 try:
                     for btn in host.locator("button").all():
                         if btn.inner_text(timeout=1_000).strip().lower() == "confirm":
-                            btn.click()
-                            confirmed = True
-                            add_log(f"[{host_name}] Clicked Confirm ✓")
-                            time.sleep(2)
-                            break
-                except Exception as e:
-                    add_log(f"[{host_name}] Button error: {e}")
+                            btn.click(); confirmed = True
+                            add_log(f"[{host_name}] ✓"); time.sleep(2); break
+                except Exception as e: add_log(f"Button err: {e}")
 
                 if not confirmed:
                     try:
-                        hx_url = host.locator("button[hx-get]").first.get_attribute("hx-get", timeout=2_000)
-                        if hx_url:
-                            r = page.evaluate(f"""async()=>{{
-                                const r=await fetch('{hx_url}',{{method:'GET',credentials:'include',
-                                headers:{{'HX-Request':'true','HX-Current-URL':window.location.href}}}});
-                                return{{status:r.status,ok:r.ok}};}}""")
-                            if r.get("ok"):
-                                confirmed = True
-                                add_log(f"[{host_name}] HTMX confirmed ✓")
-                    except Exception as e:
-                        add_log(f"[{host_name}] HTMX error: {e}")
+                        hx = host.locator("button[hx-get]").first.get_attribute("hx-get", timeout=2_000)
+                        if hx:
+                            r = page.evaluate(f"""async()=>{{const r=await fetch('{hx}',{{method:'GET',credentials:'include',headers:{{'HX-Request':'true'}}}});return r.ok;}}""")
+                            if r: confirmed = True; add_log(f"[{host_name}] HTMX ✓")
+                    except Exception as e: add_log(f"HTMX err: {e}")
 
-                if confirmed:
-                    renewed.append(host_name)
-                else:
-                    add_log(f"[{host_name}] ❌ Could not confirm")
-                    break
+                if confirmed: renewed.append(host_name)
+                else: add_log(f"[{host_name}] ❌ Could not confirm"); break
 
             browser.close()
+            return renewed, None
+    except Exception as e:
+        return [], str(e)[:200]
 
-        if renewed:
-            run_status["last_result"] = f"success|✅ Renewed {len(renewed)}: {', '.join(renewed)}"
+# ── Run ────────────────────────────────────────────────────────────────────────
+def do_renew(account_id=None):
+    global run_status
+    if run_status["running"]: return
+    cfg = load_config()
+    accounts = cfg.get("accounts", [])
+    if account_id:
+        accounts = [a for a in accounts if a["id"] == account_id]
+    if not accounts:
+        add_log("❌ No accounts configured.")
+        return
+
+    run_logs.clear()
+    run_status.update({"running": True, "last_run": datetime.now(GMT7).strftime("%Y-%m-%d %H:%M:%S GMT+7"), "last_result": None})
+    try:
+        all_renewed, all_errors = [], []
+        for acc in accounts:
+            add_log(f"--- {acc.get('username','')} ---")
+            renewed, err = renew_account(acc.get("username",""), acc.get("password",""), acc.get("totp_key",""))
+            all_renewed.extend(renewed)
+            if err: all_errors.append(f"{acc.get('username','?')}: {err}")
+
+        if all_renewed:
+            run_status["last_result"] = f"success|✅ Renewed {len(all_renewed)}: {', '.join(all_renewed)}"
+        elif all_errors:
+            run_status["last_result"] = f"error|❌ {'; '.join(all_errors)}"
         else:
             run_status["last_result"] = "info|ℹ️ No hosts needed confirmation"
         add_log(run_status["last_result"].split("|")[1])
-
     except Exception as e:
-        err = str(e)[:300]
-        add_log(f"❌ Fatal: {err}")
-        run_status["last_result"] = f"error|❌ Error: {err}"
+        run_status["last_result"] = f"error|❌ {str(e)[:200]}"
+        add_log(f"❌ {str(e)[:200]}")
     finally:
         run_status["running"] = False
 
 # ── Schedule ───────────────────────────────────────────────────────────────────
 def apply_schedule(cfg):
     scheduler.remove_all_jobs()
-    if not cfg.get("schedule_enabled"):
-        return
-    offset   = int(cfg.get("gmt_offset", 7))
-    run_hour = int(cfg.get("run_at_hour", 9))
-    utc_hour = (run_hour - offset) % 24
-    every    = int(cfg.get("run_every_days", 1))
-    day_flt  = f"*/{every}" if every > 1 else "*"
-    scheduler.add_job(func=do_renew, trigger=CronTrigger(hour=utc_hour, minute=0, day=day_flt),
-                      id="noip_renew", replace_existing=True)
-    add_log(f"⏰ Schedule: every {every} day(s) at {run_hour:02d}:00 (GMT+{offset})")
+    for acc in cfg.get("accounts", []):
+        hour   = int(acc.get("run_at_hour", 9))
+        offset = int(acc.get("gmt_offset", 7))
+        every  = int(acc.get("run_every_days", 1))
+        utc_h  = (hour - offset) % 24
+        day_f  = f"*/{every}" if every > 1 else "*"
+        acc_id = acc["id"]
+        scheduler.add_job(func=do_renew, kwargs={"account_id": acc_id},
+            trigger=CronTrigger(hour=utc_h, minute=0, day=day_f),
+            id=f"renew_{acc_id}", replace_existing=True)
+
+# ── Update ─────────────────────────────────────────────────────────────────────
+def do_update():
+    global update_running
+    update_logs.clear(); update_running = True
+    try:
+        import subprocess
+        update_logs.append("[INFO] Starting self-update...")
+        env = os.environ.copy(); env["DOCKER_API_VERSION"] = "1.43"
+        proc = subprocess.Popen(["/usr/local/bin/update.sh"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
+        for line in proc.stdout: update_logs.append(line.rstrip())
+        proc.wait()
+        if proc.returncode == 0: update_logs.append("[OK] Update complete — container restarting...")
+        else: update_logs.append(f"[ERROR] Failed (code {proc.returncode})"); update_running = False
+    except Exception as e:
+        update_logs.append(f"[ERROR] {e}"); update_running = False
+
+def init_sha():
+    cfg = load_config()
+    if cfg.get("current_sha"): return
+    try:
+        data = github_get("commits/main")
+        cfg["current_sha"] = data["sha"][:7]
+        cfg["current_version"] = get_version()
+        save_config(cfg)
+    except Exception as e:
+        log.warning(f"Could not init SHA: {e}")
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 @app.route("/")
@@ -278,60 +255,86 @@ def setup_guide():
 
 @app.route("/config")
 def config_page():
-    return render_template("index.html", config=load_config(), version=APP_VERSION, built=APP_BUILT)
+    return render_template("index.html", version=APP_VERSION, built=APP_BUILT)
+
+@app.route("/api/accounts")
+def api_accounts():
+    cfg = load_config()
+    safe = [{"id": a["id"], "username": a["username"],
+             "run_every_days": a.get("run_every_days",1),
+             "run_at_hour": a.get("run_at_hour",9),
+             "gmt_offset": a.get("gmt_offset",7)}
+            for a in cfg.get("accounts",[])]
+    return jsonify({"ok": True, "accounts": safe})
+
+@app.route("/api/account/<acc_id>")
+def api_account_get(acc_id):
+    cfg = load_config()
+    acc = next((a for a in cfg.get("accounts",[]) if a["id"] == acc_id), None)
+    if not acc: return jsonify({"ok": False, "error": "Not found"})
+    return jsonify({"ok": True, "account": acc})
+
+@app.route("/api/account/save", methods=["POST"])
+def api_account_save():
+    import uuid
+    data = request.json or {}
+    cfg  = load_config()
+    accounts = cfg.get("accounts", [])
+    acc_id = data.get("id")
+    if acc_id:
+        found = False
+        for a in accounts:
+            if a["id"] == acc_id: a.update(data); found = True; break
+        if not found: accounts.append(data)
+    else:
+        data["id"] = str(uuid.uuid4())[:8]
+        accounts.append(data)
+    cfg["accounts"] = accounts
+    save_config(cfg); apply_schedule(cfg)
+    safe = [{"id": a["id"], "username": a["username"],
+             "run_every_days": a.get("run_every_days",1),
+             "run_at_hour": a.get("run_at_hour",9),
+             "gmt_offset": a.get("gmt_offset",7)}
+            for a in accounts]
+    return jsonify({"ok": True, "accounts": safe})
+
+@app.route("/api/account/delete", methods=["POST"])
+def api_account_delete():
+    data = request.json or {}
+    cfg  = load_config()
+    cfg["accounts"] = [a for a in cfg.get("accounts",[]) if a["id"] != data.get("id")]
+    save_config(cfg); apply_schedule(cfg)
+    return jsonify({"ok": True})
 
 @app.route("/api/save", methods=["POST"])
 def api_save():
     data = request.json or {}
     cfg  = load_config()
-    for k in DEFAULT_CONFIG:
-        if k in data:
-            cfg[k] = data[k]
+    for k in ["current_sha","current_version"]:
+        if k in data: cfg[k] = data[k]
     save_config(cfg)
-    apply_schedule(cfg)
     return jsonify({"ok": True})
 
 @app.route("/api/run", methods=["POST"])
 def api_run():
-    if run_status["running"]:
-        return jsonify({"ok": False, "error": "Already running"})
-    cfg = load_config()
-    threading.Thread(target=do_renew, args=(cfg,), daemon=True).start()
+    if run_status["running"]: return jsonify({"ok": False, "error": "Already running"})
+    data = request.json or {}
+    threading.Thread(target=do_renew, kwargs={"account_id": data.get("account_id")}, daemon=True).start()
     return jsonify({"ok": True})
 
 @app.route("/api/status")
 def api_status():
-    job      = scheduler.get_job("noip_renew")
-    next_run = job.next_run_time.strftime("%Y-%m-%d %H:%M UTC") if job and job.next_run_time else None
-    return jsonify({
-        "running":     run_status["running"],
-        "last_run":    run_status["last_run"],
-        "last_result": run_status["last_result"],
-        "logs":        run_logs[-150:],
-        "next_run":    next_run,
-    })
-
-@app.route("/api/version")
-def api_version():
-    cfg = load_config()
-    return jsonify({"version": APP_VERSION, "built": APP_BUILT, "current_sha": cfg.get("current_sha","")})
+    return jsonify({"running": run_status["running"], "last_run": run_status["last_run"],
+                    "last_result": run_status["last_result"], "logs": run_logs[-150:]})
 
 @app.route("/api/changelog")
 def api_changelog():
     try:
         commits = github_get("commits?per_page=20")
-        gmt7 = timezone(timedelta(hours=7))
         entries = []
         for c in commits:
-            # Parse ISO datetime and convert to GMT+7
-            dt_str = c["commit"]["author"]["date"]  # e.g. 2026-03-23T07:00:00Z
-            dt = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-            dt_gmt7 = dt.astimezone(gmt7)
-            entries.append({
-                "sha":     c["sha"][:7],
-                "message": c["commit"]["message"].split("\n")[0][:100],
-                "date":    dt_gmt7.strftime("%Y-%m-%d %H:%M GMT+7"),
-            })
+            dt = datetime.strptime(c["commit"]["author"]["date"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).astimezone(GMT7)
+            entries.append({"sha": c["sha"][:7], "message": c["commit"]["message"].split("\n")[0][:100], "date": dt.strftime("%Y-%m-%d %H:%M GMT+7")})
         return jsonify({"ok": True, "entries": entries})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
@@ -339,86 +342,47 @@ def api_changelog():
 @app.route("/api/check_update")
 def api_check_update():
     try:
-        cfg     = load_config()
-        latest  = get_latest_commit()
-        current = cfg.get("current_sha", "")[:7]
-        current_ver = cfg.get("current_version", APP_VERSION)
-        has_update  = latest["sha"] != current
-        # Try to get latest version from GitHub VERSION file
+        cfg    = load_config()
+        data   = github_get("commits/main")
+        latest = data["sha"][:7]
+        current = cfg.get("current_sha","")[:7]
+        message = data["commit"]["message"].split("\n")[0][:100]
+        dt = datetime.strptime(data["commit"]["author"]["date"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).astimezone(GMT7)
         try:
-            latest_ver_data = github_get("contents/VERSION")
-            import base64
-            latest_ver = base64.b64decode(latest_ver_data["content"]).decode().strip()
-        except Exception:
-            latest_ver = "?"
-        return jsonify({
-            "ok":              True,
-            "has_update":      has_update,
-            "latest":          latest["sha"],
-            "current":         current,
-            "current_version": current_ver,
-            "latest_version":  latest_ver,
-            "message":         latest["message"],
-            "date":            latest["date"],
-        })
+            vd = github_get("contents/VERSION")
+            latest_ver = base64.b64decode(vd["content"]).decode().strip()
+        except: latest_ver = "?"
+        return jsonify({"ok": True, "has_update": latest != current, "latest": latest, "current": current,
+                        "current_version": cfg.get("current_version", APP_VERSION), "latest_version": latest_ver,
+                        "message": message, "date": dt.strftime("%Y-%m-%d %H:%M GMT+7")})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
-
-update_logs   = []
-update_running = False
-
-def do_update():
-    global update_running
-    update_logs.clear()
-    update_running = True
-    try:
-        import subprocess
-        update_logs.append("[INFO] Starting self-update...")
-        env = os.environ.copy()
-        env["DOCKER_API_VERSION"] = "1.43"
-        proc = subprocess.Popen(
-            ["/usr/local/bin/update.sh"],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, env=env,
-        )
-        for line in proc.stdout:
-            update_logs.append(line.rstrip())
-            log.info(f"[UPDATE] {line.rstrip()}")
-        proc.wait()
-        if proc.returncode == 0:
-            update_logs.append("[OK] Update complete — container restarting...")
-        else:
-            update_logs.append(f"[ERROR] Update failed (code {proc.returncode})")
-            update_running = False
-    except Exception as e:
-        update_logs.append(f"[ERROR] {e}")
-        update_running = False
 
 @app.route("/api/update", methods=["POST"])
 def api_update():
     global update_running
     try:
-        if update_running:
-            # Return current logs so overlay can show what's happening
-            return jsonify({"ok": False, "error": "already_running", "logs": update_logs[-50:]})
-        if not os.path.exists("/var/run/docker.sock"):
-            return jsonify({"ok": False, "error": "Docker socket not mounted."})
+        if update_running: return jsonify({"ok": False, "error": "already_running", "logs": update_logs[-50:]})
+        if not os.path.exists("/var/run/docker.sock"): return jsonify({"ok": False, "error": "Docker socket not mounted."})
         threading.Thread(target=do_update, daemon=True).start()
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
-@app.route("/api/update_reset", methods=["POST"])
-def api_update_reset():
-    """Force reset update_running state — use if stuck."""
-    global update_running
-    update_running = False
-    update_logs.clear()
-    return jsonify({"ok": True})
-
 @app.route("/api/update_status")
 def api_update_status():
     return jsonify({"running": update_running, "logs": update_logs[-50:]})
+
+@app.route("/api/update_reset", methods=["POST"])
+def api_update_reset():
+    global update_running
+    update_running = False; update_logs.clear()
+    return jsonify({"ok": True})
+
+@app.route("/api/version")
+def api_version():
+    cfg = load_config()
+    return jsonify({"version": APP_VERSION, "built": APP_BUILT, "current_sha": cfg.get("current_sha","")})
 
 if __name__ == "__main__":
     init_sha()
