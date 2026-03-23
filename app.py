@@ -228,15 +228,15 @@ def apply_schedule(cfg):
 def check_upstream(cfg):
     repo = cfg.get("upstream_repo", "").strip()
     if not repo:
-        return None, None
+        return None, None, "UPSTREAM_REPO not configured"
     try:
         url = f"https://api.github.com/repos/{repo}/commits/main"
         req = urllib.request.Request(url, headers={"User-Agent": "noip-renewer"})
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read())
-        latest_sha = data["sha"][:7]
+        latest_sha  = data["sha"][:7]
         current_sha = cfg.get("current_sha", "")[:7]
-        message = data["commit"]["message"].split("\n")[0][:80]
+        message     = data["commit"]["message"].split("\n")[0][:80]
         return latest_sha, current_sha, message
     except Exception as e:
         return None, None, str(e)
@@ -300,13 +300,15 @@ def api_status():
 
 @app.route("/api/check_update")
 def api_check_update():
-    cfg = load_config()
-    result = check_upstream(cfg)
-    if result[0] is None:
-        return jsonify({"ok": False, "error": result[2]})
-    latest, current, message = result
-    has_update = latest != current
-    return jsonify({"ok": True, "has_update": has_update, "latest": latest, "current": current, "message": message})
+    try:
+        cfg = load_config()
+        latest, current, message = check_upstream(cfg)
+        if latest is None:
+            return jsonify({"ok": False, "error": message})
+        has_update = latest != current
+        return jsonify({"ok": True, "has_update": has_update, "latest": latest, "current": current, "message": message})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
 
 
 update_logs = []
