@@ -3,17 +3,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      no_cache: false
-    pull_policy: never
     container_name: noip-renewer
     ports:
       - "7895:7895"
     volumes:
-      - noip_data:/data                           # config persistent
-      - /var/run/docker.sock:/var/run/docker.sock  # docker socket để self-update
+      - noip_data:/data
     restart: unless-stopped
     environment:
-      - CONTAINER_NAME=noip-renewer
       - GITHUB_REPO=https://github.com/W00DFISH/noip-renewer-docker
     logging:
       driver: "json-file"

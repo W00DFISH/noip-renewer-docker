@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 
-# Install system deps + git + docker CLI
+# Install system deps — NO docker CLI (avoid version mismatch with NAS daemon)
 RUN apt-get update && apt-get install -y \
     git curl \
     libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y \
     libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
     libpango-1.0-0 libcairo2 libatspi2.0-0 \
     fonts-liberation fonts-noto-color-emoji \
-    && curl -fsSL https://get.docker.com | sh \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -19,8 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
 COPY app.py .
 COPY VERSION .
 COPY templates/ templates/
-COPY update.sh /usr/local/bin/update.sh
-RUN chmod +x /usr/local/bin/update.sh && mkdir -p /data
+RUN mkdir -p /data
 
 EXPOSE 7895
 CMD ["python", "app.py"]
