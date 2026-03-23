@@ -27,12 +27,12 @@ def get_version():
         return "unknown"
 
 def get_build_time():
-    """Return image build time in GMT+7."""
+    """Return image build time in GMT+7 with full H:M:S."""
     try:
         from datetime import timezone, timedelta
         gmt7 = timezone(timedelta(hours=7))
         ts = os.path.getmtime("/app/VERSION")
-        return datetime.fromtimestamp(ts, tz=gmt7).strftime("%Y-%m-%d %H:%M GMT+7")
+        return datetime.fromtimestamp(ts, tz=gmt7).strftime("%Y-%m-%d %H:%M:%S GMT+7")
     except Exception:
         return "unknown"
 
@@ -61,15 +61,14 @@ APP_CHANGELOG = get_changelog_latest()
 
 # ── Config ────────────────────────────────────────────────────────────────────
 DEFAULT_CONFIG = {
-    "username":      "",
-    "password":      "",
-    "totp_key":      "",
+    "username":         "",
+    "password":         "",
+    "totp_key":         "",
     "schedule_enabled": False,
-    "run_every_days": 1,
-    "run_at_hour":   9,
-    "gmt_offset":    7,
-    "upstream_repo": "",
-    "current_sha":   "",
+    "run_every_days":   1,
+    "run_at_hour":      9,
+    "gmt_offset":       7,
+    "current_sha":      "",
 }
 
 def load_config():
@@ -256,12 +255,11 @@ def apply_schedule(cfg):
     add_log(f"⏰ Schedule set: every {every_days} day(s) at {run_hour:02d}:00 local (GMT+{offset})")
 
 # ── Update check ──────────────────────────────────────────────────────────────
+UPSTREAM_REPO = "W00DFISH/noip-renewer-docker"
+
 def check_upstream(cfg):
-    repo = cfg.get("upstream_repo", "").strip()
-    if not repo:
-        return None, None, "UPSTREAM_REPO not configured"
     try:
-        url = f"https://api.github.com/repos/{repo}/commits/main"
+        url = f"https://api.github.com/repos/{UPSTREAM_REPO}/commits/main"
         req = urllib.request.Request(url, headers={"User-Agent": "noip-renewer"})
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read())

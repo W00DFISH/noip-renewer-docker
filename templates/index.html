@@ -189,17 +189,6 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
       </div>
 
       <div class="divider"></div>
-
-      <div class="field">
-        <label>Upstream GitHub Repo <span style="color:var(--muted);font-weight:400;text-transform:none">(for update check)</span></label>
-        <input type="text" id="upstream_repo" placeholder="W00DFISH/noip-renewer-docker" value="{{ config.upstream_repo or 'W00DFISH/noip-renewer-docker' }}">
-      </div>
-      <div class="field">
-        <label>Current Commit SHA <span style="color:var(--muted);font-weight:400;text-transform:none">(auto-filled)</span></label>
-        <input type="text" id="current_sha" placeholder="abc1234" value="{{ config.current_sha }}" style="font-family:var(--mono)" readonly>
-      </div>
-
-      <div class="divider"></div>
       <div class="btn-row">
         <button class="btn btn-secondary" onclick="saveConfig()">💾 Save config</button>
       </div>
@@ -279,7 +268,7 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
           <button class="btn btn-warn" id="updateNowBtn" onclick="doUpdate()">
             ⬇️ Update Now
           </button>
-          <button class="btn btn-ghost" onclick="window.open('https://github.com/W00DFISH/noip-renewer-docker', '_blank')">
+          <button class="btn btn-warn" onclick="window.open('https://github.com/W00DFISH/noip-renewer-docker', '_blank')">
             🔗 View on GitHub
           </button>
         </div>
@@ -313,11 +302,9 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 
 function getCredentials(){
   return {
-    username:    document.getElementById('username').value.trim(),
-    password:    document.getElementById('password').value.trim(),
-    totp_key:    document.getElementById('totp_key').value.trim(),
-    upstream_repo: document.getElementById('upstream_repo').value.trim(),
-    current_sha: document.getElementById('current_sha').value.trim(),
+    username: document.getElementById('username').value.trim(),
+    password: document.getElementById('password').value.trim(),
+    totp_key: document.getElementById('totp_key').value.trim(),
   };
 }
 
