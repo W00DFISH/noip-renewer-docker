@@ -381,48 +381,87 @@ async function checkUpdate(){
 
 // ── Do Update ─────────────────────────────────────────────────────────────────
 async function doUpdate(){
-  if(!confirm('Pull latest code from GitHub and rebuild the container?\n\nThe app will be unavailable for ~5 minutes during rebuild.')) return;
-  const btn = document.getElementById('updateNowBtn');
-  btn.disabled = true; btn.textContent = '⏳ Updating...';
-  const logBox = document.getElementById('updateLogBox');
-  logBox.style.display = 'block'; logBox.innerHTML = '';
+  if(!confirm('Pull latest code from GitHub and rebuild the container?\n\nThis takes ~5 minutes. Do not close the tab.')) return;
+
+  // Show fullscreen overlay — blocks all interaction
+  let overlay = document.createElement('div');
+  overlay.id = 'updateOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(8,11,18,.95);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:Syne,sans-serif';
+  overlay.innerHTML = `
+    <div style="font-size:52px">🔄</div>
+    <div id="ovTitle" style="font-size:24px;font-weight:800;color:#dde1f5">Updating...</div>
+    <div id="ovMsg" style="font-size:14px;color:#5a6080;max-width:480px;text-align:center;line-height:1.65">Building new image from GitHub. Please wait.</div>
+    <div id="ovCount" style="display:none;font-size:72px;font-weight:900;color:#00e5a0;font-family:'JetBrains Mono',monospace;line-height:1"></div>
+    <div id="ovLog" style="background:#04060c;border:1px solid #1e2438;border-radius:10px;padding:14px;width:560px;max-width:90vw;height:180px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.75;text-align:left"></div>
+    <div style="font-size:12px;color:#5a6080">⚠️ Do not close this tab</div>
+  `;
+  document.body.appendChild(overlay);
+  window.onbeforeunload = () => 'Update is in progress!';
+
+  function logLine(l){
+    const box = document.getElementById('ovLog');
+    if(!box) return;
+    let c = '#5a6080';
+    if(l.includes('[OK]')||l.includes('Done')||l.includes('complete')) c='#00e5a0';
+    else if(l.includes('[ERROR]')) c='#ff6b6b';
+    else if(l.includes('===')) c='#4d9fff';
+    box.innerHTML += `<div style="color:${c}">${esc(l)}</div>`;
+    box.scrollTop = box.scrollHeight;
+  }
 
   const r = await fetch('/api/update', {method:'POST'});
   const d = await r.json();
-  if(!d.ok){ alert(d.error); btn.disabled=false; btn.textContent='⬇️ Update Now'; return; }
+  if(!d.ok){
+    document.body.removeChild(overlay);
+    window.onbeforeunload = null;
+    alert('Update failed:\n' + d.error);
+    return;
+  }
 
-  let countdown = null;
-  const upPoll = setInterval(async()=>{
+  logLine('[INFO] Update started...');
+
+  const poll = setInterval(async()=>{
     try{
       const r2 = await fetch('/api/update_status');
       const d2 = await r2.json();
-      // Render update log
+      // Append new log lines
       if(d2.logs.length){
-        logBox.innerHTML = d2.logs.map(l=>{
-          let c='log-line';
-          if(l.includes('[OK]')||l.includes('complete')||l.includes('Done')) c+=' ok';
-          else if(l.includes('[ERROR]')) c+=' err';
-          else if(l.includes('===')) c+=' info';
-          return `<div class="${c}">${esc(l)}</div>`;
-        }).join('');
-        logBox.scrollTop = logBox.scrollHeight;
+        const box = document.getElementById('ovLog');
+        if(box){
+          box.innerHTML = d2.logs.map(l=>{
+            let c='#5a6080';
+            if(l.includes('[OK]')||l.includes('Done')||l.includes('complete')) c='#00e5a0';
+            else if(l.includes('[ERROR]')) c='#ff6b6b';
+            else if(l.includes('===')) c='#4d9fff';
+            return `<div style="color:${c}">${esc(l)}</div>`;
+          }).join('');
+          box.scrollTop = box.scrollHeight;
+        }
       }
-      if(!d2.running && !countdown){
-        clearInterval(upPoll);
-        if(d2.logs.some(l=>l.includes('[OK]'))){
-          btn.textContent = '✓ Done — reloading in 15s';
-          let n = 15;
-          countdown = setInterval(()=>{
-            n--;
-            btn.textContent = `✓ Done — reloading in ${n}s...`;
-            if(n<=0){ clearInterval(countdown); location.reload(); }
-          }, 1000);
+      if(!d2.running){
+        clearInterval(poll);
+        const ok = d2.logs.some(l=>l.includes('[OK]'));
+        if(ok){
+          document.getElementById('ovTitle').textContent = '✅ Done!';
+          document.getElementById('ovMsg').textContent = 'Container restarting — page reloads automatically.';
+          window.onbeforeunload = null;
+          const cdEl = document.getElementById('ovCount');
+          cdEl.style.display = 'block';
+          let n = 15; cdEl.textContent = n;
+          const cd = setInterval(()=>{
+            n--; cdEl.textContent = n;
+            if(n<=0){ clearInterval(cd); location.reload(); }
+          },1000);
         } else {
-          btn.disabled=false; btn.textContent='⬇️ Update Now';
+          document.body.removeChild(overlay);
+          window.onbeforeunload = null;
+          alert('Update failed. Check logs.');
         }
       }
     } catch(e){
-      // Container restarting — keep trying
+      // Container restarting — keep polling
+      const box = document.getElementById('ovLog');
+      if(box) box.innerHTML += `<div style="color:#4d9fff">[INFO] Waiting for container...</div>`;
     }
   }, 1500);
 }
