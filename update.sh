@@ -60,6 +60,10 @@ docker run -d \
   -e CONTAINER_NAME="$CONTAINER" \
   $IMAGE
 echo "=== New container started! v$NEW_VER ==="
+# Cleanup unused images (old builds)
+echo "--- Cleaning up unused images..."
+docker image prune -f
+echo "--- Cleanup done."
 RESTART
 
 chmod +x /tmp/do_restart.sh
