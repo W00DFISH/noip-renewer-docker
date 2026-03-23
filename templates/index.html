@@ -439,17 +439,34 @@ async function doUpdate(){
 
   logLine('[INFO] Update started...');
 
+  let doneTriggered = false;
+
+  function startCountdown(){
+    if(doneTriggered) return;
+    doneTriggered = true;
+    clearInterval(poll);
+    window.onbeforeunload = null;
+    document.getElementById('ovTitle').textContent = '✅ Done!';
+    document.getElementById('ovMsg').textContent = 'Container restarting — page reloads automatically.';
+    const cdEl = document.getElementById('ovCount');
+    cdEl.style.display = 'block';
+    let n = 15; cdEl.textContent = n;
+    const cd = setInterval(()=>{
+      n--; cdEl.textContent = n;
+      if(n<=0){ clearInterval(cd); location.reload(); }
+    }, 1000);
+  }
+
   const poll = setInterval(async()=>{
     try{
       const r2 = await fetch('/api/update_status');
       const d2 = await r2.json();
-      // Append new log lines
       if(d2.logs.length){
         const box = document.getElementById('ovLog');
         if(box){
           box.innerHTML = d2.logs.map(l=>{
             let c='#5a6080';
-            if(l.includes('[OK]')||l.includes('Done')||l.includes('complete')) c='#00e5a0';
+            if(l.includes('[OK]')||l.includes('Done')||l.includes('complete')||l.includes('restarting')) c='#00e5a0';
             else if(l.includes('[ERROR]')) c='#ff6b6b';
             else if(l.includes('===')) c='#4d9fff';
             return `<div style="color:${c}">${esc(l)}</div>`;
@@ -457,30 +474,20 @@ async function doUpdate(){
           box.scrollTop = box.scrollHeight;
         }
       }
-      if(!d2.running){
+      // Trigger countdown as soon as [OK] appears in logs
+      if(d2.logs.some(l=>l.includes('[OK]'))){
+        startCountdown();
+      } else if(!d2.running){
         clearInterval(poll);
-        const ok = d2.logs.some(l=>l.includes('[OK]'));
-        if(ok){
-          document.getElementById('ovTitle').textContent = '✅ Done!';
-          document.getElementById('ovMsg').textContent = 'Container restarting — page reloads automatically.';
-          window.onbeforeunload = null;
-          const cdEl = document.getElementById('ovCount');
-          cdEl.style.display = 'block';
-          let n = 15; cdEl.textContent = n;
-          const cd = setInterval(()=>{
-            n--; cdEl.textContent = n;
-            if(n<=0){ clearInterval(cd); location.reload(); }
-          },1000);
-        } else {
-          document.body.removeChild(overlay);
-          window.onbeforeunload = null;
-          alert('Update failed. Check logs.');
-        }
+        document.body.removeChild(overlay);
+        window.onbeforeunload = null;
+        alert('Update failed. Check logs.');
       }
     } catch(e){
-      // Container restarting — keep polling
+      // Connection error = container restarted = success!
       const box = document.getElementById('ovLog');
-      if(box) box.innerHTML += `<div style="color:#4d9fff">[INFO] Waiting for container...</div>`;
+      if(box) box.innerHTML += `<div style="color:#4d9fff">[INFO] Container restarting...</div>`;
+      startCountdown();
     }
   }, 1500);
 }
