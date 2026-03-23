@@ -292,6 +292,20 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
     </div>
   </div>
 
+  <!-- ── Changelog ── -->
+  <div class="card span2">
+    <div class="card-header">
+      <span class="card-icon">📋</span>
+      <h2>Changelog</h2>
+      <span style="font-size:11px;color:var(--muted);margin-left:auto">Auto-loaded from GitHub commits</span>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div id="changelogBox" style="font-family:var(--mono);font-size:12px">
+        <div style="padding:16px;color:var(--muted)">Loading...</div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /layout -->
 
 <script>
@@ -539,6 +553,25 @@ function showUpdatePanel(){
   ['gmt_offset','run_every_days','run_at_hour'].forEach(id =>
     document.getElementById(id).addEventListener('input', updateSchedPreview)
   );
+})();
+
+// ── Changelog ─────────────────────────────────────────────────────────────────
+(async () => {
+  try {
+    const r = await fetch('/api/changelog');
+    const d = await r.json();
+    if(!d.ok || !d.entries.length) return;
+    const box = document.getElementById('changelogBox');
+    box.innerHTML = d.entries.map((e,i) => `
+      <div style="display:flex;gap:16px;padding:11px 20px;border-bottom:1px solid var(--border);${i===0?'background:rgba(0,229,160,.03)':''}">
+        <span style="color:var(--muted);white-space:nowrap;flex-shrink:0">${esc(e.date)}</span>
+        <span style="color:var(--purple);flex-shrink:0;font-size:11px;margin-top:1px">${esc(e.sha)}</span>
+        <span style="color:${i===0?'var(--green)':'var(--text)'};flex:1">${esc(e.message)}${i===0?' <span style="font-size:10px;color:var(--green);background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);padding:1px 7px;border-radius:4px;margin-left:6px">latest</span>':''}</span>
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('changelogBox').innerHTML =
+      '<div style="padding:16px;color:var(--muted)">Could not load changelog: ' + esc(String(e)) + '</div>';
+  }
 })();
 </script>
 </body>

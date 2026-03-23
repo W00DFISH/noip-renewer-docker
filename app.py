@@ -36,28 +36,25 @@ def get_build_time():
     except Exception:
         return "unknown"
 
-def get_changelog_latest():
-    """Return first changelog entry (latest version notes)."""
+def get_changelog_from_github(limit=10):
+    """Fetch latest commits from GitHub as changelog. Always up to date."""
     try:
-        with open("/app/CHANGELOG.md") as f:
-            lines = f.readlines()
-        notes = []
-        in_section = False
-        for line in lines:
-            if line.startswith("## ") and not in_section:
-                in_section = True
-                notes.append(line.strip())
-            elif line.startswith("## ") and in_section:
-                break
-            elif in_section and line.strip():
-                notes.append(line.strip())
-        return "\n".join(notes)
-    except Exception:
-        return ""
+        url = f"https://api.github.com/repos/{UPSTREAM_REPO}/commits?per_page={limit}"
+        req = urllib.request.Request(url, headers={"User-Agent": "noip-renewer"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            commits = json.loads(r.read())
+        entries = []
+        for c in commits:
+            sha   = c["sha"][:7]
+            msg   = c["commit"]["message"].split("\n")[0][:100]
+            date  = c["commit"]["author"]["date"][:10]
+            entries.append({"sha": sha, "message": msg, "date": date})
+        return entries
+    except Exception as e:
+        return [{"sha": "?", "message": f"Could not fetch: {e}", "date": ""}]
 
 APP_VERSION  = get_version()
 APP_BUILT    = get_build_time()
-APP_CHANGELOG = get_changelog_latest()
 
 # ── Config ────────────────────────────────────────────────────────────────────
 DEFAULT_CONFIG = {
@@ -288,11 +285,16 @@ def config_page():
 def api_version():
     cfg = load_config()
     return jsonify({
-        "version":   APP_VERSION,
-        "built":     APP_BUILT,
-        "changelog": APP_CHANGELOG,
+        "version":     APP_VERSION,
+        "built":       APP_BUILT,
         "current_sha": cfg.get("current_sha", ""),
     })
+
+@app.route("/api/changelog")
+def api_changelog():
+    """Return latest commits from GitHub as changelog."""
+    entries = get_changelog_from_github(limit=15)
+    return jsonify({"ok": True, "entries": entries})
 
 @app.route("/api/save", methods=["POST"])
 def api_save():
