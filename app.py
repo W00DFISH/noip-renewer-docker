@@ -337,7 +337,16 @@ def api_check_update():
         if latest is None:
             return jsonify({"ok": False, "error": message})
         has_update = latest != current
-        return jsonify({"ok": True, "has_update": has_update, "latest": latest, "current": current, "message": message})
+        current_version = cfg.get("current_version", APP_VERSION)
+        return jsonify({
+            "ok": True,
+            "has_update":      has_update,
+            "latest":          latest,
+            "current":         current,
+            "message":         message,
+            "current_version": current_version,
+            "latest_version":  "check GitHub" if has_update else current_version,
+        })
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
@@ -350,14 +359,16 @@ def do_update():
     update_logs.clear()
     update_running = True
     try:
-        import subprocess, shlex
+        import subprocess
         update_logs.append("[INFO] Starting self-update...")
+        env = os.environ.copy()
+        env["DOCKER_API_VERSION"] = "1.43"  # Fix Synology NAS Docker daemon version
         proc = subprocess.Popen(
             ["/usr/local/bin/update.sh"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
-            env=os.environ.copy(),
+            env=env,
         )
         for line in proc.stdout:
             line = line.rstrip()

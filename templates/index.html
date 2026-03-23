@@ -454,8 +454,14 @@ async function doUpdate(){
       if(!d2.running){
         clearInterval(updatePolling);
         btn.textContent = '✓ Done — restarting...';
-        // Page will become unreachable briefly — reload after 8s
-        setTimeout(() => { location.reload(); }, 8000);
+        // Container restarting — page unreachable briefly, reload after 10s
+        btn.textContent = '✓ Done — reloading in 10s...';
+        let count = 10;
+        const t = setInterval(() => {
+          count--;
+          btn.textContent = `✓ Done — reloading in ${count}s...`;
+          if(count <= 0){ clearInterval(t); location.reload(); }
+        }, 1000);
       }
     } catch(e) {
       // Container restarting — keep trying
@@ -486,20 +492,26 @@ async function checkUpdate(){
     const d = await r.json();
     btn.textContent = '🔍 Check update';
     btn.disabled = false;
-    if(!d.ok){ alert('Could not check: ' + d.error); return; }
+    if(!d.ok){ alert('Could not check:\n' + d.error); return; }
     if(d.has_update){
       document.getElementById('updateBadge').classList.add('visible');
       document.getElementById('updateInfo').innerHTML =
-        `⚠️ <strong>Update available!</strong><br>
-        Your version: <span class="update-sha">${esc(d.current||'unknown')}</span> →
-        Latest: <span class="update-sha" style="color:var(--green)">${esc(d.latest)}</span><br>
-        Latest commit: <em>${esc(d.message)}</em><br><br>
-        To update: pull the latest code from GitHub and rebuild the Docker image.`;
+        `<strong style="color:var(--yellow)">⚠️ New version available!</strong><br><br>` +
+        `<table style="font-size:13px;border-collapse:collapse;width:100%">` +
+        `<tr><td style="padding:5px 0;color:var(--muted);width:130px">Current version</td>` +
+        `<td><span style="color:var(--red);font-weight:700">${esc(d.current_version||'unknown')}</span>` +
+        ` <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${esc(d.current||'')}</span></td></tr>` +
+        `<tr><td style="padding:5px 0;color:var(--muted)">Latest version</td>` +
+        `<td><span style="color:var(--green);font-weight:700">${esc(d.latest_version||'unknown')}</span>` +
+        ` <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${esc(d.latest||'')}</span></td></tr>` +
+        `<tr><td style="padding:5px 0;color:var(--muted)">What's new</td>` +
+        `<td style="color:var(--text);font-style:italic">${esc(d.message)}</td></tr>` +
+        `</table>`;
       showUpdatePanel();
     } else {
       document.getElementById('updateBadge').classList.remove('visible');
       document.getElementById('updatePanel').classList.remove('visible');
-      alert('✅ Already up to date! (' + d.latest + ')');
+      alert('✅ Already up to date!\n\nVersion: ' + (d.current_version||d.current) + '\nSHA: ' + d.current);
     }
   } catch(e){
     btn.textContent = '🔍 Check update';
