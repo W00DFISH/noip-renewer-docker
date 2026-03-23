@@ -363,13 +363,22 @@ def api_update():
     global update_running
     try:
         if update_running:
-            return jsonify({"ok": False, "error": "Already running"})
+            # Return current logs so overlay can show what's happening
+            return jsonify({"ok": False, "error": "already_running", "logs": update_logs[-50:]})
         if not os.path.exists("/var/run/docker.sock"):
-            return jsonify({"ok": False, "error": "Docker socket not mounted. Add to docker-compose volumes."})
+            return jsonify({"ok": False, "error": "Docker socket not mounted."})
         threading.Thread(target=do_update, daemon=True).start()
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
+
+@app.route("/api/update_reset", methods=["POST"])
+def api_update_reset():
+    """Force reset update_running state — use if stuck."""
+    global update_running
+    update_running = False
+    update_logs.clear()
+    return jsonify({"ok": True})
 
 @app.route("/api/update_status")
 def api_update_status():

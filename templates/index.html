@@ -227,6 +227,7 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
           <button class="btn btn-secondary" onclick="checkUpdate()" id="checkBtn">🔍 Check for update</button>
           <button class="btn" id="updateNowBtn" style="background:rgba(255,209,102,.1);color:var(--yellow);border:1px solid rgba(255,209,102,.25);display:none" onclick="doUpdate()">⬇️ Update Now</button>
           <button class="nbtn nbtn-ghost" onclick="window.open('https://github.com/W00DFISH/noip-renewer-docker','_blank')">🔗 GitHub</button>
+          <button class="nbtn nbtn-ghost" id="resetBtn" style="color:var(--red);border-color:rgba(255,107,107,.3);display:none" onclick="resetUpdate()">↺ Reset stuck</button>
         </div>
       </div>
       <div class="update-log-wrap" id="updateLogBox"></div>
@@ -380,6 +381,14 @@ async function checkUpdate(){
 }
 
 // ── Do Update ─────────────────────────────────────────────────────────────────
+async function resetUpdate(){
+  await fetch('/api/update_reset', {method:'POST'});
+  document.getElementById('resetBtn').style.display='none';
+  document.getElementById('checkBtn').disabled=false;
+  document.getElementById('updateNowBtn').disabled=false;
+  document.getElementById('updateInfo').innerHTML='<span style="color:var(--green)">✅ State reset. You can try again.</span>';
+}
+
 async function doUpdate(){
   if(!confirm('Pull latest code from GitHub and rebuild the container?\n\nThis takes ~5 minutes. Do not close the tab.')) return;
 
@@ -412,10 +421,20 @@ async function doUpdate(){
   const r = await fetch('/api/update', {method:'POST'});
   const d = await r.json();
   if(!d.ok){
-    document.body.removeChild(overlay);
-    window.onbeforeunload = null;
-    alert('Update failed:\n' + d.error);
-    return;
+    if(d.error === 'already_running'){
+      // Update is already running — show overlay with existing logs
+      document.getElementById('ovTitle').textContent = '⏳ Update in progress...';
+      document.getElementById('ovMsg').textContent = 'An update is already running. Showing live log.';
+      // fall through to polling below
+    } else {
+      document.body.removeChild(overlay);
+      window.onbeforeunload = null;
+      // Show reset option
+      if(confirm('Error: ' + d.error + '\n\nReset update state and try again?')){
+        await fetch('/api/update_reset', {method:'POST'});
+      }
+      return;
+    }
   }
 
   logLine('[INFO] Update started...');
@@ -478,6 +497,15 @@ async function doUpdate(){
     if(d.last_run)document.getElementById('statusText').textContent='Last run: '+d.last_run;
     if(d.next_run)document.getElementById('nextRunText').textContent='⏰ Next: '+d.next_run;
     if(d.running){setRunning(true);startPolling();}
+  }catch(e){}
+  // Check if update is stuck
+  try{
+    const ru=await fetch('/api/update_status');const du=await ru.json();
+    if(du.running){
+      document.getElementById('resetBtn').style.display='inline-flex';
+      document.getElementById('updateInfo').innerHTML=
+        '<span style="color:var(--yellow)">⚠️ An update appears to be running (or stuck). Click ↺ Reset stuck to clear.</span>';
+    }
   }catch(e){}
 })();
 </script>
