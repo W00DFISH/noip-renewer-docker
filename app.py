@@ -171,8 +171,20 @@ def renew_account(username, password, totp_key):
                     raise RuntimeError("Could not load my.noip.com after 3 attempts")
                 if "login" in page.url:
                     raise RuntimeError("Session lost")
-                try: page.locator("#zone-collection-wrapper, .dns-records, table, .expiration-banner, [hx-get*='/touch']").first.wait_for(timeout=15_000)
+                try: page.locator("#zone-collection-wrapper, .dns-records, table, [hx-get*='/touch'], a[href*='dns/records']").first.wait_for(timeout=15_000)
                 except PWT: add_log("No records wrapper."); break
+
+                # Log all hostnames on the page
+                try:
+                    all_links = page.locator('a[href*="dns/records?jump"]').all()
+                    host_names_all = []
+                    for lnk in all_links:
+                        txt = lnk.inner_text(timeout=500).strip()
+                        if txt and "." in txt:
+                            host_names_all.append(txt)
+                    if host_names_all:
+                        add_log(f"📋 All hosts in account: {', '.join(host_names_all)}")
+                except: pass
 
                 # Find all Confirm buttons (hx-get*="/touch" is the new No-IP UI)
                 confirm_btns = page.locator('button[hx-get*="/touch"]').all()
@@ -278,7 +290,7 @@ def do_renew(account_id=None):
         save_history_entry({
             "ts":      datetime.now(GMT7).timestamp(),
             "time":    datetime.now(GMT7).strftime("%Y-%m-%d %H:%M:%S GMT+7"),
-            "trigger": "manual" if not account_id else f"scheduled:{account_id}",
+            "trigger": "manual" if not account_id else "scheduled",
             "result":  run_status["last_result"].split("|")[0],
             "summary": result_msg,
             "renewed": all_renewed,

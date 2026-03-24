@@ -569,10 +569,11 @@ async function loadHistory(){
     box.innerHTML = d.entries.map((e,i)=>{
       const icon = e.result==='success'?'✅':e.result==='error'?'❌':'ℹ️';
       const col  = e.result==='success'?'var(--green)':e.result==='error'?'var(--red)':'var(--blue)';
-      const trigger = e.trigger==='manual'?'<span style="color:var(--muted)">manual</span>':'<span style="color:var(--purple)">⏰ scheduled</span>';
-      return `<div style="display:flex;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);font-size:12px;align-items:flex-start">
-        <span style="color:var(--muted);font-family:var(--mono);min-width:155px;flex-shrink:0">${esc(e.time)}</span>
-        <span>${trigger}</span>
+      const trigCol = e.trigger==='manual'?'var(--muted)':'var(--purple)';
+      const trigTxt = e.trigger==='manual'?'manual':'⏰ scheduled';
+      return `<div style="display:flex;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);font-size:12px;align-items:center">
+        <span style="color:var(--muted);font-family:var(--mono);min-width:170px;flex-shrink:0">${esc(e.time)}</span>
+        <span style="color:${trigCol};min-width:80px;flex-shrink:0">${trigTxt}</span>
         <span style="color:${col};flex:1">${icon} ${esc(e.summary)}</span>
       </div>`;
     }).join('');

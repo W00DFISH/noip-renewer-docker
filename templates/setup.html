@@ -125,31 +125,6 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
     <div class="step-header">
       <div class="step-num">01</div>
       <div class="step-title">
-        <h3>Fork the GitHub Repository</h3>
-        <p>Create your own copy of the code</p>
-      </div>
-    </div>
-    <div class="step-body">
-      <div class="inst">
-        <div class="inst-n">1</div>
-        <div class="inst-text">Open <a href="https://github.com/W00DFISH/noip-renewer-docker" target="_blank"><strong>github.com/W00DFISH/noip-renewer-docker</strong></a> and click <strong>"Use this template" → "Create a new repository"</strong>.</div>
-      </div>
-      <div class="inst">
-        <div class="inst-n">2</div>
-        <div class="inst-text">Give it a name like <code>noip-renewer-docker</code>. Set visibility to <strong>Private</strong> to keep your credentials safe if you ever edit the files.</div>
-      </div>
-      <div class="inst">
-        <div class="inst-n">3</div>
-        <div class="inst-text">Click <strong>"Create repository"</strong>. Copy the repository URL — you'll need it in Step 3.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Step 2 -->
-  <div class="step">
-    <div class="step-header">
-      <div class="step-num">02</div>
-      <div class="step-title">
         <h3>Install Portainer on Synology</h3>
         <p>Skip this step if Portainer is already running</p>
       </div>
@@ -185,13 +160,13 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
     </div>
   </div>
 
-  <!-- Step 3 -->
+  <!-- Step 2 -->
   <div class="step">
     <div class="step-header">
-      <div class="step-num">03</div>
+      <div class="step-num">02</div>
       <div class="step-title">
         <h3>Create Stack in Portainer</h3>
-        <p>Deploy directly from your GitHub repo</p>
+        <p>Deploy directly from the GitHub repo — no forking needed</p>
       </div>
     </div>
     <div class="step-body">
@@ -202,65 +177,26 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
       <div class="inst">
         <div class="inst-n">2</div>
         <div class="inst-text">Select the <strong>"Repository"</strong> tab. Fill in:
-          <br>• <strong>Repository URL:</strong> your forked repo URL
+          <br>• <strong>Repository URL:</strong> <code>https://github.com/W00DFISH/noip-renewer-docker</code>
           <br>• <strong>Reference:</strong> <code>main</code>
           <br>• <strong>Compose path:</strong> <code>docker-compose.yml</code>
         </div>
       </div>
       <div class="inst">
         <div class="inst-n">3</div>
-        <div class="inst-text">Enable <strong>"Automatic updates"</strong> if you want Portainer to watch for git changes (optional — you can also use the in-app update button).</div>
-      </div>
-      <div class="inst">
-        <div class="inst-n">4</div>
         <div class="inst-text">Click <strong>"Deploy the stack"</strong>. Portainer will pull the code, build the image, and start the container.</div>
       </div>
       <div class="note" style="margin:0 20px 16px">First build takes 3–5 minutes as it installs Chromium. Subsequent starts are instant.</div>
     </div>
   </div>
 
-  <!-- Step 4 — Environment Variables -->
+  <!-- Step 3 -->
   <div class="step">
     <div class="step-header">
-      <div class="step-num">04</div>
+      <div class="step-num">03</div>
       <div class="step-title">
-        <h3>Environment Variables</h3>
-        <p>The only variables needed in docker-compose — everything else is configured in the web UI</p>
-      </div>
-    </div>
-    <div class="step-body">
-      <table class="var-table">
-        <thead>
-          <tr>
-            <th>Variable</th>
-            <th>Required</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="vname">CONTAINER_NAME</td>
-            <td><span class="req-opt">Optional</span></td>
-            <td style="font-size:13px;color:var(--muted2)">Container name for self-restart on update. Default: <code style="font-family:var(--mono);font-size:11px;color:var(--yellow)">noip-renewer</code></td>
-          </tr>
-          <tr>
-            <td class="vname">GITHUB_REPO</td>
-            <td><span class="req-opt">Optional</span></td>
-            <td style="font-size:13px;color:var(--muted2)">Your forked repo URL for self-update. Default: <code style="font-family:var(--mono);font-size:11px;color:var(--yellow)">https://github.com/W00DFISH/noip-renewer-docker</code></td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="warn" style="margin:0 20px 16px">All No-IP credentials (email, password, TOTP key) and schedule settings are configured <strong>inside the web UI</strong> and stored in a Docker volume — never in docker-compose.</div>
-    </div>
-  </div>
-
-  <!-- Step 5 -->
-  <div class="step">
-    <div class="step-header">
-      <div class="step-num">05</div>
-      <div class="step-title">
-        <h3>Open the Web UI & Configure</h3>
-        <p>Enter your credentials and set your schedule</p>
+        <h3>Open the Web UI & Add Account</h3>
+        <p>Enter your No-IP credentials and set your schedule</p>
       </div>
     </div>
     <div class="step-body">
@@ -270,23 +206,27 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
       </div>
       <div class="inst">
         <div class="inst-n">2</div>
-        <div class="inst-text">Go to <strong>⚙️ Config</strong> → fill in your No-IP <strong>Email</strong>, <strong>Password</strong>, and <strong>TOTP Key</strong> (if using 2FA).</div>
+        <div class="inst-text">Go to <strong>⚙️ Config</strong> → click <strong>＋ Add account</strong> on the left panel.</div>
       </div>
       <div class="inst">
         <div class="inst-n">3</div>
-        <div class="inst-text">Set your <strong>Schedule</strong>: enable it, choose your GMT offset, run frequency, and hour. Click <strong>Save schedule</strong>.</div>
+        <div class="inst-text">Fill in your No-IP <strong>Email</strong>, <strong>Password</strong>, and optionally <strong>TOTP Key</strong> (if using 2FA). Set your preferred run schedule.</div>
       </div>
       <div class="inst">
         <div class="inst-n">4</div>
-        <div class="inst-text">Click <strong>▶ Run Now</strong> to test. Watch the live log — you should see <code style="color:var(--green)">✅ Login successful!</code> followed by confirmation of each host.</div>
+        <div class="inst-text">Click <strong>💾 Save</strong>. The account appears in the left list.</div>
+      </div>
+      <div class="inst">
+        <div class="inst-n">5</div>
+        <div class="inst-text">Click <strong>▶ Run All Now</strong> to test. Watch the live log — you should see <code style="color:var(--green)">✅ Login successful!</code> and a list of all your hostnames.</div>
       </div>
     </div>
   </div>
 
-  <!-- Step 6 — TOTP Key -->
+  <!-- Step 4 — TOTP Key -->
   <div class="step">
     <div class="step-header">
-      <div class="step-num">06</div>
+      <div class="step-num">04</div>
       <div class="step-title">
         <h3>Getting Your TOTP Key (2FA users only)</h3>
         <p>How to find the 16-character key from No-IP</p>
@@ -303,13 +243,43 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
       </div>
       <div class="inst">
         <div class="inst-n">3</div>
-        <div class="inst-text">Paste it into the <strong>TOTP Key</strong> field in the web UI.</div>
+        <div class="inst-text">Paste it into the <strong>TOTP Key</strong> field when adding your account in the web UI.</div>
       </div>
       <div class="warn" style="margin:0 20px 16px">If you already set up 2FA and didn't save the key — <strong>disable then re-enable 2FA</strong> to get a new one. There's no way to retrieve an existing key.</div>
     </div>
   </div>
 
-  <div class="divider"></div>
+  <!-- Step 5 — View config data -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">05</div>
+      <div class="step-title">
+        <h3>Where is my data stored?</h3>
+        <p>Credentials and history are in a Docker volume</p>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="inst">
+        <div class="inst-n">1</div>
+        <div class="inst-text">All account credentials, schedule settings and run history are stored in a <strong>Docker volume</strong> named <code>noip_data</code>, inside the container at <code>/data/config.json</code>.</div>
+      </div>
+      <div class="inst">
+        <div class="inst-n">2</div>
+        <div class="inst-text">To view your config via SSH:
+          <div class="code-block" style="margin:8px 0 0">
+            <div class="code-bar"><span class="code-label">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <div class="code-body">docker exec noip-renewer cat /data/config.json</div>
+          </div>
+        </div>
+      </div>
+      <div class="inst">
+        <div class="inst-n">3</div>
+        <div class="inst-text">The volume <strong>survives container restarts and updates</strong>. Your data is never lost when redeploying.</div>
+      </div>
+    </div>
+  </div>
+
+    <div class="divider"></div>
 
   <!-- Done -->
   <div class="done-card">
