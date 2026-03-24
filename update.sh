@@ -20,13 +20,17 @@ NEW_SHA=$(git -C "$WORK_DIR" rev-parse --short HEAD)
 NEW_VER=$(cat "$WORK_DIR/VERSION" 2>/dev/null || echo "unknown")
 echo "Latest: v$NEW_VER ($NEW_SHA)"
 
-echo "--- Removing old image..."
-docker rmi "$IMAGE" 2>/dev/null && echo "Old image removed." || echo "No old image found."
-
-# Rebuild image
-echo "--- Rebuilding Docker image..."
+# Rebuild image (always fresh, no cache)
+echo "--- Rebuilding Docker image (no-cache)..."
 cd "$WORK_DIR"
-docker build -t "$IMAGE" .
+docker build --no-cache -t "$IMAGE" .
+echo "--- Build complete!"
+
+# Remove old/dangling images after successful build
+echo "--- Cleaning up old images..."
+docker image prune -f 2>/dev/null || true
+# Force remove any untagged noip images
+docker images --format "{{.ID}} {{.Repository}}:{{.Tag}}" | grep "noip-renewer" | grep -v "$IMAGE" | awk '{print $1}' | xargs -r docker rmi -f 2>/dev/null || true
 echo "--- Build complete!"
 
 # Save SHA + version to config
@@ -63,9 +67,6 @@ docker run -d \
   -e CONTAINER_NAME="$CONTAINER" \
   $IMAGE
 echo "=== New container started! v$NEW_VER ==="
-# Clean up any dangling/unused images
-docker image prune -f 2>/dev/null || true
-echo "--- Cleanup done."
 RESTART
 
 chmod +x /tmp/do_restart.sh

@@ -240,8 +240,7 @@ function renderAccList(accounts){
   }
   box.innerHTML = accounts.map(a => {
     const h12 = a.run_at_hour === 0 ? '12 AM' : a.run_at_hour < 12 ? `${a.run_at_hour} AM` : a.run_at_hour === 12 ? '12 PM' : `${a.run_at_hour-12} PM`;
-    const name = a.username.split('@')[0];
-    return `<button class="acc-btn ${a.id===currentAccId?'active':''}" onclick="loadAccount('${a.id}')">
+    return `<button class="acc-btn ${a.id===currentAccId?'active':''}" onclick="toggleAccount('${a.id}')">
       <div class="acc-avatar">👤</div>
       <div class="acc-info">
         <div class="acc-name">${esc(a.username)}</div>
@@ -251,14 +250,21 @@ function renderAccList(accounts){
   }).join('');
 }
 
-async function loadAccount(id){
+async function toggleAccount(id){
+  // If clicking same account → minimize form
+  if(currentAccId === id){
+    currentAccId = null;
+    document.getElementById('formTitle').textContent = 'Select or add an account';
+    document.getElementById('deleteBtn').style.display = 'none';
+    document.getElementById('formBody').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">Select an account from the left, or click <strong style="color:var(--green)">＋ Add account</strong></div>';
+    renderAccList(await (await fetch('/api/accounts')).json().then(d=>d.accounts||[]));
+    return;
+  }
   currentAccId = id;
   const r = await fetch(`/api/account/${id}`);
   const d = await r.json();
   if(!d.ok) return;
-  const a = d.account;
-  showForm(a);
-  // Refresh list to update active state
+  showForm(d.account);
   loadAccounts();
 }
 

@@ -351,6 +351,29 @@ def setup_guide():
 def config_page():
     return render_template("index.html", version=APP_VERSION, built=APP_BUILT)
 
+@app.route("/api/noip_hosts", methods=["POST"])
+def api_noip_hosts():
+    """Fetch hostname list from No-IP after login."""
+    data = request.json or {}
+    username = data.get("username","")
+    password = data.get("password","")
+    if not username or not password:
+        return jsonify({"ok": False, "error": "Missing credentials"})
+    try:
+        import urllib.request, base64
+        # Use No-IP API to get host list
+        creds = base64.b64encode(f"{username}:{password}".encode()).decode()
+        req = urllib.request.Request(
+            "https://api.noip.com/v4/dns/browse",
+            headers={"Authorization": f"Basic {creds}", "User-Agent": "noip-renewer/1.0"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+        hosts = [h.get("hostname","") for h in data.get("hosts",[]) if h.get("hostname")]
+        return jsonify({"ok": True, "hosts": hosts})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
 @app.route("/api/accounts")
 def api_accounts():
     cfg = load_config()
