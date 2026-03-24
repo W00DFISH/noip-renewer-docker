@@ -22,6 +22,24 @@ run_logs       = []
 run_status     = {"running": False, "last_run": None, "last_result": None}
 update_logs    = []
 update_running = False
+RUN_HISTORY_FILE = "/data/run_history.json"
+
+def load_history():
+    try:
+        entries = json.load(open(RUN_HISTORY_FILE))
+        # Keep only last 7 days
+        cutoff = datetime.now(GMT7).timestamp() - 7 * 86400
+        return [e for e in entries if e.get("ts", 0) > cutoff]
+    except: return []
+
+def save_history_entry(entry):
+    history = load_history()
+    history.append(entry)
+    # Keep max 200 entries
+    history = history[-200:]
+    os.makedirs("/data", exist_ok=True)
+    with open(RUN_HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=2)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 def load_config():
@@ -167,17 +185,29 @@ def renew_account(username, password, totp_key):
                 add_log(f"Found {len(confirm_btns)} host(s) needing confirmation.")
 
                 host = confirm_btns[0]
-                # Get hostname from hx-get URL or nearby text
                 host_name = "unknown"
                 try:
-                    hx_url = host.get_attribute("hx-get", timeout=1_000)
-                    # Extract ID from URL like /ajax/host/89460306/touch
+                    hx_url = host.get_attribute("hx-get", timeout=1_000) or ""
                     host_id = hx_url.split("/")[-2] if hx_url else "?"
-                    # Try to find hostname text near the button
-                    xpath = "xpath=ancestor::div[contains(@class,'alert') or contains(@class,'banner') or contains(@class,'card')][1]"
-                    parent = page.locator(f'[hx-get="{hx_url}"]').locator(xpath)
-                    host_name = parent.inner_text(timeout=1_000).split("\n")[0][:50].strip()
-                    if not host_name: host_name = f"host-{host_id}"
+                    # Look for hostname in nearby elements: heading, strong, td, span
+                    for ancestor_xpath in [
+                        "xpath=ancestor::tr[1]",
+                        "xpath=ancestor::div[contains(@class,'alert')][1]",
+                        "xpath=ancestor::div[contains(@class,'row')][1]",
+                        "xpath=preceding::*[contains(@class,'hostname') or contains(@class,'host-name')][1]",
+                    ]:
+                        try:
+                            txt = host.locator(ancestor_xpath).inner_text(timeout=500)
+                            # Extract hostname pattern (word.ddns.net etc)
+                            import re as _re
+                            m = _re.search(r'[\w\-]+\.[\w\.\-]+\.\w+', txt)
+                            if m:
+                                host_name = m.group(0); break
+                            # Fallback: first non-empty line
+                            lines = [l.strip() for l in txt.split("\n") if l.strip() and "Confirm" not in l and "Expires" not in l]
+                            if lines: host_name = lines[0][:40]; break
+                        except: pass
+                    if host_name == "unknown": host_name = f"host-{host_id}"
                 except: pass
 
                 add_log(f"[{host_name}] Confirming...")
@@ -242,10 +272,28 @@ def do_renew(account_id=None):
             run_status["last_result"] = f"error|❌ {'; '.join(all_errors)}"
         else:
             run_status["last_result"] = "info|ℹ️ No hosts needed confirmation"
-        add_log(run_status["last_result"].split("|")[1])
+        result_msg = run_status["last_result"].split("|")[1]
+        add_log(result_msg)
+        # Save to run history
+        save_history_entry({
+            "ts":      datetime.now(GMT7).timestamp(),
+            "time":    datetime.now(GMT7).strftime("%Y-%m-%d %H:%M:%S GMT+7"),
+            "trigger": "manual" if not account_id else f"scheduled:{account_id}",
+            "result":  run_status["last_result"].split("|")[0],
+            "summary": result_msg,
+            "renewed": all_renewed,
+        })
     except Exception as e:
         run_status["last_result"] = f"error|❌ {str(e)[:200]}"
         add_log(f"❌ {str(e)[:200]}")
+        save_history_entry({
+            "ts":      datetime.now(GMT7).timestamp(),
+            "time":    datetime.now(GMT7).strftime("%Y-%m-%d %H:%M:%S GMT+7"),
+            "trigger": "manual",
+            "result":  "error",
+            "summary": str(e)[:200],
+            "renewed": [],
+        })
     finally:
         run_status["running"] = False
 
@@ -380,8 +428,18 @@ def api_changelog():
         entries = []
         for c in commits:
             dt = datetime.strptime(c["commit"]["author"]["date"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).astimezone(GMT7)
-            entries.append({"sha": c["sha"][:7], "message": c["commit"]["message"].split("\n")[0][:100], "date": dt.strftime("%Y-%m-%d %H:%M GMT+7")})
+            msg = c["commit"]["message"].split("\n")[0][:100]
+            # Extract version number from commit message if present (e.g. "v1.0.14 - Fix ...")
+            entries.append({"sha": c["sha"][:7], "message": msg, "date": dt.strftime("%Y-%m-%d %H:%M GMT+7")})
         return jsonify({"ok": True, "entries": entries})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+@app.route("/api/history")
+def api_history():
+    try:
+        history = load_history()
+        return jsonify({"ok": True, "entries": list(reversed(history))})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 

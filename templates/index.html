@@ -160,13 +160,28 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
         <button class="btn btn-green" id="runBtn" onclick="runNow()">▶ Run All Now</button>
       </div>
       <div class="divider"></div>
-      <div style="display:flex;align-items:center;margin-bottom:10px">
+      <!-- Collapsible Live Log -->
+      <div style="display:flex;align-items:center;margin-bottom:8px;cursor:pointer" onclick="toggleLog()">
         <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Live Log</span>
-        <button class="nbtn nbtn-ghost" style="padding:4px 12px;font-size:11px;margin-left:auto" onclick="clearLog()">Clear</button>
+        <span id="logToggleIcon" style="margin-left:8px;font-size:11px;color:var(--muted)">▶ expand</span>
+        <button class="nbtn nbtn-ghost" style="padding:4px 12px;font-size:11px;margin-left:auto" onclick="event.stopPropagation();clearLog()">Clear</button>
       </div>
-      <div class="log-wrap" id="logBox">
-        <div class="log-line" style="color:var(--border2);font-style:italic">Logs appear here when running...</div>
+      <div id="logCollapse" style="display:none">
+        <div class="log-wrap" id="logBox">
+          <div class="log-line" style="color:var(--border2);font-style:italic">Logs appear here when running...</div>
+        </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Run History -->
+  <div class="card span2">
+    <div class="card-header">
+      <span>🕐</span><h2>Run History</h2>
+      <span style="font-size:11px;color:var(--muted);margin-left:auto">Last 7 days</span>
+    </div>
+    <div id="historyBox" style="font-size:12px">
+      <div style="padding:14px 18px;color:var(--muted)">Loading...</div>
     </div>
   </div>
 
@@ -192,11 +207,14 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
 
   <!-- Commit Log -->
   <div class="card span2">
-    <div class="card-header"><span>📋</span><h2>Commit Log</h2>
-      <span style="font-size:11px;color:var(--muted);margin-left:auto">Auto-loaded from GitHub · GMT+7</span>
+    <div class="card-header" style="cursor:pointer" onclick="toggleChangelog()">
+      <span>📋</span><h2>Commit Log</h2>
+      <span id="clToggleIcon" style="font-size:11px;color:var(--muted);margin-left:auto">▶ expand</span>
     </div>
-    <div id="changelogBox" style="font-size:12px">
-      <div style="padding:14px 18px;color:var(--muted)">Loading...</div>
+    <div id="changelogCollapse" style="display:none">
+      <div id="changelogBox" style="font-size:12px">
+        <div style="padding:14px 18px;color:var(--muted)">Loading...</div>
+      </div>
     </div>
   </div>
 
@@ -365,6 +383,7 @@ async function runNow(){
   const d = await r.json();
   if(!d.ok){ alert(d.error); return; }
   document.getElementById('logBox').innerHTML = '';
+  expandLog();
   setRunning(true); startPolling();
 }
 function setRunning(running){
@@ -405,7 +424,7 @@ function startPolling(){
       renderLog(d.logs);
       if(d.last_result) setResult(d.last_result);
       if(d.last_run) document.getElementById('statusText').textContent = 'Last run: ' + d.last_run;
-      if(!d.running){ setRunning(false); clearInterval(polling); }
+      if(!d.running){ setRunning(false); clearInterval(polling); loadHistory(); }
     }catch(e){}
   }, 1500);
 }
@@ -514,18 +533,64 @@ async function loadChangelog(){
   }catch(e){ document.getElementById('changelogBox').innerHTML='<div style="padding:14px 18px;color:var(--muted)">Could not load.</div>'; }
 }
 
+// ── Collapsible sections ─────────────────────────────────────────────────────
+let logExpanded = false;
+function toggleLog(){
+  logExpanded = !logExpanded;
+  document.getElementById('logCollapse').style.display = logExpanded ? 'block' : 'none';
+  document.getElementById('logToggleIcon').textContent = logExpanded ? '▼ collapse' : '▶ expand';
+}
+function expandLog(){
+  if(!logExpanded){ logExpanded=true; document.getElementById('logCollapse').style.display='block'; document.getElementById('logToggleIcon').textContent='▼ collapse'; }
+}
+let clExpanded = false;
+function toggleChangelog(){
+  clExpanded = !clExpanded;
+  document.getElementById('changelogCollapse').style.display = clExpanded ? 'block' : 'none';
+  document.getElementById('clToggleIcon').textContent = clExpanded ? '▼ collapse' : '▶ expand';
+  if(clExpanded) loadChangelog();
+}
+
+// ── Run History ───────────────────────────────────────────────────────────────
+async function loadHistory(){
+  try{
+    const r=await fetch('/api/history'); const d=await r.json();
+    const box=document.getElementById('historyBox');
+    if(!d.ok||!d.entries.length){
+      box.innerHTML='<div style="padding:14px 18px;color:var(--muted)">No runs yet in the last 7 days.</div>';
+      return;
+    }
+    box.innerHTML = d.entries.map((e,i)=>{
+      const icon = e.result==='success'?'✅':e.result==='error'?'❌':'ℹ️';
+      const col  = e.result==='success'?'var(--green)':e.result==='error'?'var(--red)':'var(--blue)';
+      const trigger = e.trigger==='manual'?'<span style="color:var(--muted)">manual</span>':'<span style="color:var(--purple)">⏰ scheduled</span>';
+      return `<div style="display:flex;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);font-size:12px;align-items:flex-start">
+        <span style="color:var(--muted);font-family:var(--mono);min-width:155px;flex-shrink:0">${esc(e.time)}</span>
+        <span>${trigger}</span>
+        <span style="color:${col};flex:1">${icon} ${esc(e.summary)}</span>
+      </div>`;
+    }).join('');
+  }catch(e){
+    document.getElementById('historyBox').innerHTML='<div style="padding:14px 18px;color:var(--muted)">Could not load history.</div>';
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async()=>{
   loadAccounts();
-  loadChangelog();
+  loadHistory();
 
-  // Status
+  // Status — restore last result but keep log minimized
   try{
     const r=await fetch('/api/status'); const d=await r.json();
-    if(d.logs.length) renderLog(d.logs);
     if(d.last_result) setResult(d.last_result);
     if(d.last_run) document.getElementById('statusText').textContent='Last run: '+d.last_run;
-    if(d.running){ setRunning(true); startPolling(); }
+    // Only show log if currently running
+    if(d.running){
+      expandLog();
+      renderLog(d.logs);
+      setRunning(true); startPolling();
+    }
   }catch(e){}
 
   // Silent update check
