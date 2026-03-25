@@ -165,28 +165,40 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
     <div class="step-header">
       <div class="step-num">02</div>
       <div class="step-title">
-        <h3>Create Stack in Portainer</h3>
-        <p>Deploy directly from the GitHub repo — no forking needed</p>
+        <h3>Deploy via SSH (Standalone Container)</h3>
+        <p>Deploy as standalone — NOT via Portainer Stack — so updates work correctly</p>
       </div>
     </div>
     <div class="step-body">
       <div class="inst">
         <div class="inst-n">1</div>
-        <div class="inst-text">In Portainer, go to <strong>Stacks → Add stack</strong>. Give it the name <code>noip-renewer</code>.</div>
+        <div class="inst-text">Enable SSH on Synology: <strong>Control Panel → Terminal & SNMP → Enable SSH</strong></div>
       </div>
       <div class="inst">
         <div class="inst-n">2</div>
-        <div class="inst-text">Select the <strong>"Repository"</strong> tab. Fill in:
-          <br>• <strong>Repository URL:</strong> <code>https://github.com/W00DFISH/noip-renewer-docker</code>
-          <br>• <strong>Reference:</strong> <code>main</code>
-          <br>• <strong>Compose path:</strong> <code>docker-compose.yml</code>
+        <div class="inst-text">Connect via SSH (use PuTTY on Windows or Terminal on Mac):<br>
+          <code>ssh admin@nas-ip</code>
         </div>
       </div>
       <div class="inst">
         <div class="inst-n">3</div>
-        <div class="inst-text">Click <strong>"Deploy the stack"</strong>. Portainer will pull the code, build the image, and start the container.</div>
+        <div class="inst-text">Run this single command — it clones the repo, builds the image, and starts the container:
+          <div class="code-block" style="margin:8px 0 0">
+            <div class="code-bar"><span class="code-label">bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+            <div class="code-body">curl -fsSL https://raw.githubusercontent.com/W00DFISH/noip-renewer-docker/main/deploy.sh | bash</div>
+          </div>
+        </div>
       </div>
-      <div class="note" style="margin:0 20px 16px">First build takes 3–5 minutes as it installs Chromium. Subsequent starts are instant.</div>
+      <div class="inst">
+        <div class="inst-n">4</div>
+        <div class="inst-text">Wait ~5 minutes for first build. When done, open <strong><code>http://nas-ip:7895</code></strong></div>
+      </div>
+      <div class="warn" style="margin:0 20px 16px">
+        <strong>Why not Portainer Stack?</strong> When using Portainer Stack, Portainer manages the container lifecycle and will override updates made by the web UI. Running as standalone lets the web UI update correctly.
+      </div>
+      <div class="note" style="margin:0 20px 16px">
+        The container is still <strong>visible in Portainer</strong> under Containers — you can view logs, stats, etc. You just don't deploy it via Stacks.
+      </div>
     </div>
   </div>
 

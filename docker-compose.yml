@@ -1,3 +1,5 @@
+# KHÔNG dùng file này để deploy qua Portainer Stack
+# Xem README.md phần "Deploy as standalone container"
 services:
   noip-renewer:
     build:
@@ -13,7 +15,6 @@ services:
     environment:
       - GITHUB_REPO=https://github.com/W00DFISH/noip-renewer-docker
       - CONTAINER_NAME=noip-renewer
-      - PORTAINER_WEBHOOK=${PORTAINER_WEBHOOK:-}  # Optional: Portainer stack webhook URL
     logging:
       driver: "json-file"
       options:

@@ -192,16 +192,36 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
       <span style="font-size:11px;color:var(--muted);margin-left:auto">github.com/W00DFISH/noip-renewer-docker</span>
     </div>
     <div class="card-body">
-      <div class="update-panel">
-        <div id="updateInfo" style="font-size:13px;color:var(--muted2)">Click "🔍 Check update" to check for new versions.</div>
-        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-ghost" id="checkBtn" onclick="checkUpdate()">🔍 Check for update</button>
-          <button class="btn" id="updateNowBtn" style="background:rgba(255,209,102,.1);color:var(--yellow);border:1px solid rgba(255,209,102,.25);display:none" onclick="doUpdate()">⬇️ Update Now</button>
-          <button class="nbtn nbtn-ghost" id="resetBtn" style="display:none;color:var(--red);border-color:rgba(255,107,107,.3)" onclick="resetUpdate()">↺ Reset stuck</button>
-          <button class="nbtn nbtn-ghost" onclick="window.open('https://github.com/W00DFISH/noip-renewer-docker','_blank')">🔗 GitHub</button>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <button class="btn btn-ghost" id="checkBtn" onclick="checkUpdate()" style="flex:none">🔍 Check for update</button>
+        <button class="nbtn nbtn-ghost" onclick="window.open('https://github.com/W00DFISH/noip-renewer-docker','_blank')" style="flex:none">🔗 GitHub</button>
+      </div>
+      <div id="updateUpToDate" style="display:none;font-size:13px;color:var(--green)">✅ Already up to date!</div>
+      <div id="updateAvailable" style="display:none;background:rgba(255,209,102,.05);border:1px solid rgba(255,209,102,.2);border-radius:10px;padding:16px">
+        <div style="font-size:14px;font-weight:700;color:var(--yellow);margin-bottom:10px">⚠️ New version available!</div>
+        <div id="updateVersionInfo" style="font-size:13px;color:var(--text);margin-bottom:16px;line-height:1.6"></div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px">How to update via Portainer</div>
+          <div style="display:flex;flex-direction:column;gap:9px;font-size:13px">
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <span style="background:var(--green);color:#000;border-radius:50%;width:20px;height:20px;min-width:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px">1</span>
+              <span>Open Portainer → <strong>Stacks</strong> → <strong>noip-renewer</strong></span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <span style="background:var(--green);color:#000;border-radius:50%;width:20px;height:20px;min-width:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px">2</span>
+              <span>Click <strong>"Pull and redeploy"</strong> → confirm</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <span style="background:var(--green);color:#000;border-radius:50%;width:20px;height:20px;min-width:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px">3</span>
+              <span>Wait ~2 minutes → refresh this page</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <span style="background:var(--green);color:#000;border-radius:50%;width:20px;height:20px;min-width:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px">4</span>
+              <span>Portainer → <strong>Images</strong> → tick all <span style="background:rgba(255,107,107,.12);color:var(--red);padding:1px 7px;border-radius:4px;font-size:11px;font-weight:700">Unused</span> → <strong>Remove</strong></span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="update-log-wrap" id="updateLogBox"></div>
     </div>
   </div>
 
@@ -441,88 +461,39 @@ function scrollToUpdate(){ document.getElementById('updateCard').scrollIntoView(
 async function checkUpdate(){
   const btn = document.getElementById('checkBtn');
   btn.textContent = '⏳ Checking...'; btn.disabled = true;
-  document.getElementById('updateNowBtn').style.display = 'none';
+  document.getElementById('updateUpToDate').style.display = 'none';
+  document.getElementById('updateAvailable').style.display = 'none';
   try{
     const r = await fetch('/api/check_update'); const d = await r.json();
     btn.textContent = '🔍 Check for update'; btn.disabled = false;
     if(!d.ok){ alert('Could not check:\n' + d.error); return; }
     if(d.has_update){
       document.getElementById('updateBadge').classList.add('visible');
-      document.getElementById('updateNowBtn').style.display = 'flex';
-      document.getElementById('updateInfo').innerHTML =
-        `<strong style="color:var(--yellow)">⚠️ New version available!</strong><br><br>`+
-        `<table style="font-size:13px;border-collapse:collapse">`+
-        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">Your version</td><td style="color:var(--red);font-weight:700">${esc(d.current_version||'?')}</td><td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">(${esc(d.current)})</td></tr>`+
-        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">Latest</td><td style="color:var(--green);font-weight:700">v${esc(d.latest_version||'?')}</td><td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">(${esc(d.latest)})</td></tr>`+
-        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">What's new</td><td colspan="2" style="color:var(--text);font-style:italic">${esc(d.message)}</td></tr>`+
-        `<tr><td style="padding:5px 12px 5px 0;color:var(--muted)">Date</td><td colspan="2" style="color:var(--muted2)">${esc(d.date)}</td></tr>`+
+      document.getElementById('updateVersionInfo').innerHTML =
+        `<table style="border-collapse:collapse">` +
+        `<tr><td style="padding:3px 12px 3px 0;color:var(--muted)">Your version</td>` +
+        `<td style="color:var(--red);font-weight:700">${esc(d.current_version||'?')}</td>` +
+        `<td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">(${esc(d.current)})</td></tr>` +
+        `<tr><td style="padding:3px 12px 3px 0;color:var(--muted)">Latest</td>` +
+        `<td style="color:var(--green);font-weight:700">v${esc(d.latest_version||'?')}</td>` +
+        `<td style="font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:8px">(${esc(d.latest)})</td></tr>` +
+        `<tr><td style="padding:3px 12px 3px 0;color:var(--muted)">What's new</td>` +
+        `<td colspan="2" style="font-style:italic">${esc(d.message)}</td></tr>` +
         `</table>`;
+      document.getElementById('updateAvailable').style.display = 'block';
       scrollToUpdate();
     } else {
       document.getElementById('updateBadge').classList.remove('visible');
-      document.getElementById('updateInfo').innerHTML =
-        `<span style="color:var(--green)">✅ Already up to date!</span> <span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${esc(d.current_version||'')} (${esc(d.current)})</span>`;
+      document.getElementById('updateUpToDate').style.display = 'block';
+      document.getElementById('updateUpToDate').textContent =
+        `✅ Already up to date! v${esc(d.current_version||'')} (${esc(d.current)})`;
     }
   }catch(e){ btn.textContent='🔍 Check for update'; btn.disabled=false; alert('Error: '+e); }
 }
 
-async function resetUpdate(){
-  await fetch('/api/update_reset',{method:'POST'});
-  document.getElementById('resetBtn').style.display='none';
-  document.getElementById('updateInfo').innerHTML='<span style="color:var(--green)">✅ Reset done. Try again.</span>';
-}
 
-async function doUpdate(){
-  let overlay = document.createElement('div');
-  overlay.id = 'updateOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(8,11,18,.95);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:Syne,sans-serif';
-  overlay.innerHTML = `
-    <div style="font-size:52px">🔄</div>
-    <div id="ovTitle" style="font-size:24px;font-weight:800;color:#dde1f5">Updating...</div>
-    <div id="ovMsg" style="font-size:14px;color:#5a6080;max-width:480px;text-align:center;line-height:1.65">Building new image from GitHub. Please wait.</div>
-    <div id="ovCount" style="display:none;font-size:72px;font-weight:900;color:#00e5a0;font-family:'JetBrains Mono',monospace;line-height:1"></div>
-    <div id="ovLog" style="background:#04060c;border:1px solid #1e2438;border-radius:10px;padding:14px;width:560px;max-width:90vw;height:180px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.75;text-align:left"></div>
-    <div style="font-size:12px;color:#5a6080">⚠️ Do not close this tab</div>`;
-  document.body.appendChild(overlay);
-  window.onbeforeunload = () => 'Update is in progress!';
 
-  const r = await fetch('/api/update',{method:'POST'});
-  const d = await r.json();
-  if(!d.ok && d.error !== 'already_running'){
-    document.body.removeChild(overlay); window.onbeforeunload=null;
-    if(confirm('Error: '+d.error+'\n\nReset and try again?')) await fetch('/api/update_reset',{method:'POST'});
-    return;
-  }
 
-  let doneTriggered = false;
-  function startCountdown(){
-    if(doneTriggered) return; doneTriggered=true; clearInterval(poll);
-    window.onbeforeunload=null;
-    document.getElementById('ovTitle').textContent='✅ Done!';
-    document.getElementById('ovMsg').textContent='Container restarting — page reloads automatically.';
-    const cdEl=document.getElementById('ovCount'); cdEl.style.display='block';
-    let n=15; cdEl.textContent=n;
-    const cd=setInterval(()=>{n--;cdEl.textContent=n;if(n<=0){clearInterval(cd);location.reload();}},1000);
-  }
-
-  const poll=setInterval(async()=>{
-    try{
-      const r2=await fetch('/api/update_status'); const d2=await r2.json();
-      if(d2.logs.length){
-        const box=document.getElementById('ovLog');
-        if(box){ box.innerHTML=d2.logs.map(l=>{
-          let c='#5a6080';
-          if(l.includes('[OK]')||l.includes('Done')||l.includes('restarting')) c='#00e5a0';
-          else if(l.includes('[ERROR]')) c='#ff6b6b';
-          else if(l.includes('===')) c='#4d9fff';
-          return `<div style="color:${c}">${esc(l)}</div>`;
-        }).join(''); box.scrollTop=box.scrollHeight; }
-      }
-      if(d2.logs.some(l=>l.includes('[OK]'))){ startCountdown(); }
-      else if(!d2.running){ document.body.removeChild(overlay); window.onbeforeunload=null; clearInterval(poll); alert('Update failed.'); }
-    }catch(e){ startCountdown(); }
-  },1500);
-}
 
 // ── Changelog ─────────────────────────────────────────────────────────────────
 async function loadChangelog(){
@@ -610,7 +581,6 @@ async function loadHistory(){
     const rc=await fetch('/api/check_update'); const dc=await rc.json();
     if(dc.ok && dc.has_update){
       document.getElementById('updateBadge').classList.add('visible');
-      document.getElementById('updateNowBtn').style.display='flex';
       document.getElementById('updateInfo').innerHTML=
         `<strong style="color:var(--yellow)">⚠️ Update available: v${esc(dc.latest_version||dc.latest)}</strong><br>`+
         `<span style="font-size:13px;color:var(--muted2)">Click ⬇️ Update Now to install.</span>`;
