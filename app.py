@@ -174,16 +174,33 @@ def renew_account(username, password, totp_key):
                 try: page.locator("#zone-collection-wrapper, .dns-records, table, [hx-get*='/touch'], a[href*='dns/records']").first.wait_for(timeout=15_000)
                 except PWT: add_log("No records wrapper."); break
 
-                # Log all hostnames on the page
+                # Log all hostnames visible on the DNS records page
                 try:
-                    all_links = page.locator('a[href*="dns/records?jump"]').all()
                     host_names_all = []
-                    for lnk in all_links:
-                        txt = lnk.inner_text(timeout=500).strip()
-                        if txt and "." in txt:
-                            host_names_all.append(txt)
+                    # Try table rows - hostname column
+                    for sel in [
+                        'td:first-child a', 
+                        '.hostname', 
+                        '[class*="hostname"]',
+                        'td.text-truncate',
+                        'td:nth-child(1)',
+                    ]:
+                        els = page.locator(sel).all()
+                        for el in els:
+                            try:
+                                txt = el.inner_text(timeout=300).strip()
+                                if txt and "." in txt and len(txt) < 60 and " " not in txt:
+                                    host_names_all.append(txt)
+                            except: pass
+                        if host_names_all: break
+                    # Fallback: find text matching hostname pattern on page
+                    if not host_names_all:
+                        import re as _re
+                        page_text = page.content()
+                        matches = _re.findall(r'[\w-]+\.ddns\.net|[\w-]+\.no-ip\.(?:org|biz|info|com)', page_text)
+                        host_names_all = list(dict.fromkeys(matches))  # unique, preserve order
                     if host_names_all:
-                        add_log(f"📋 All hosts in account: {', '.join(host_names_all)}")
+                        add_log(f"📋 All hosts: {', '.join(host_names_all[:20])}")
                 except: pass
 
                 # Find all Confirm buttons (hx-get*="/touch" is the new No-IP UI)
