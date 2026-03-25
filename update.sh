@@ -50,7 +50,7 @@ echo "--- Removing old image tag..."
 docker rmi "$IMAGE" --force 2>/dev/null && echo "Old image removed." || echo "No old image found."
 
 # Build fresh
-docker build --no-cache -t "$IMAGE" .
+docker build -t "$IMAGE" .
 echo "--- Build complete!"
 
 # Save SHA
