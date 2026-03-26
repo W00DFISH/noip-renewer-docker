@@ -199,8 +199,14 @@ def renew_account(username, password, totp_key):
                         page_text = page.content()
                         matches = _re.findall(r'[\w-]+\.ddns\.net|[\w-]+\.no-ip\.(?:org|biz|info|com)', page_text)
                         host_names_all = list(dict.fromkeys(matches))  # unique, preserve order
-                    # Filter out NS records
-                    host_names_all = [h for h in host_names_all if "ns1." not in h and "ns2." not in h and "noip.com" not in h and ".noip." not in h]
+                    # Filter out NS records and noip infrastructure
+                    host_names_all = [
+                        h for h in host_names_all
+                        if h
+                        and "." in h
+                        and not any(x in h.lower() for x in ["ns1.", "ns2.", "ns3.", "ns4.", "noip.com", ".noip.com", "mail.", "smtp."])
+                        and len(h) < 60
+                    ]
                     if host_names_all:
                         add_log(f"📋 All hosts: {', '.join(host_names_all[:20])}")
                 except: pass
@@ -290,7 +296,7 @@ def do_renew(account_id=None):
     run_logs.clear()
     run_status.update({"running": True, "last_run": datetime.now(GMT7).strftime("%Y-%m-%d %H:%M:%S GMT+7"), "last_result": None})
     try:
-        all_renewed, all_errors = [], []
+        all_renewed, all_errors, all_hosts = [], [], []
         for acc in accounts:
             add_log(f"--- {acc.get('username','')} ---")
             renewed, err = renew_account(acc.get("username",""), acc.get("password",""), acc.get("totp_key",""))
@@ -305,15 +311,16 @@ def do_renew(account_id=None):
             run_status["last_result"] = "info|ℹ️ No hosts needed confirmation"
         result_msg = run_status["last_result"].split("|")[1]
         add_log(result_msg)
-        # Extract host list from logs
-        host_list = []
+        # Collect ALL hosts from all log lines (combined across all accounts)
+        seen = set()
         for line in run_logs:
             if "All hosts:" in line:
                 part = line.split("All hosts:")[-1].strip()
-                hosts = [h.strip() for h in part.split(",")]
-                # Filter out NS records (ns1.noip.com etc)
-                host_list = [h for h in hosts if h and "ns1." not in h and "ns2." not in h and "noip.com" not in h]
-                break
+                for h in part.split(","):
+                    h = h.strip()
+                    if h and h not in seen:
+                        seen.add(h)
+                        all_hosts.append(h)
         save_history_entry({
             "ts":      datetime.now(GMT7).timestamp(),
             "time":    datetime.now(GMT7).strftime("%Y-%m-%d %H:%M:%S GMT+7"),
@@ -321,7 +328,7 @@ def do_renew(account_id=None):
             "result":  run_status["last_result"].split("|")[0],
             "summary": result_msg,
             "renewed": all_renewed,
-            "hosts":   host_list,
+            "hosts":   all_hosts,
         })
     except Exception as e:
         run_status["last_result"] = f"error|❌ {str(e)[:200]}"
