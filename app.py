@@ -199,6 +199,8 @@ def renew_account(username, password, totp_key):
                         page_text = page.content()
                         matches = _re.findall(r'[\w-]+\.ddns\.net|[\w-]+\.no-ip\.(?:org|biz|info|com)', page_text)
                         host_names_all = list(dict.fromkeys(matches))  # unique, preserve order
+                    # Filter out NS records
+                    host_names_all = [h for h in host_names_all if "ns1." not in h and "ns2." not in h and "noip.com" not in h and ".noip." not in h]
                     if host_names_all:
                         add_log(f"📋 All hosts: {', '.join(host_names_all[:20])}")
                 except: pass
@@ -303,7 +305,15 @@ def do_renew(account_id=None):
             run_status["last_result"] = "info|ℹ️ No hosts needed confirmation"
         result_msg = run_status["last_result"].split("|")[1]
         add_log(result_msg)
-        # Save to run history
+        # Extract host list from logs
+        host_list = []
+        for line in run_logs:
+            if "All hosts:" in line:
+                part = line.split("All hosts:")[-1].strip()
+                hosts = [h.strip() for h in part.split(",")]
+                # Filter out NS records (ns1.noip.com etc)
+                host_list = [h for h in hosts if h and "ns1." not in h and "ns2." not in h and "noip.com" not in h]
+                break
         save_history_entry({
             "ts":      datetime.now(GMT7).timestamp(),
             "time":    datetime.now(GMT7).strftime("%Y-%m-%d %H:%M:%S GMT+7"),
@@ -311,6 +321,7 @@ def do_renew(account_id=None):
             "result":  run_status["last_result"].split("|")[0],
             "summary": result_msg,
             "renewed": all_renewed,
+            "hosts":   host_list,
         })
     except Exception as e:
         run_status["last_result"] = f"error|❌ {str(e)[:200]}"

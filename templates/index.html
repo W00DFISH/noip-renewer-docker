@@ -224,17 +224,6 @@ nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-co
       </div>
     </div>
   </div>
-
-  <!-- Commit Log -->
-  <div class="card span2">
-    <div class="card-header" style="cursor:pointer" onclick="toggleChangelog()">
-      <span>📋</span><h2>Commit Log</h2>
-      <span id="clToggleIcon" style="font-size:11px;color:var(--muted);margin-left:auto">▶ expand</span>
-    </div>
-    <div id="changelogCollapse" style="display:none">
-      <div id="changelogBox" style="font-size:12px">
-        <div style="padding:14px 18px;color:var(--muted)">Loading...</div>
-      </div>
     </div>
   </div>
 
@@ -496,19 +485,7 @@ async function checkUpdate(){
 
 
 // ── Changelog ─────────────────────────────────────────────────────────────────
-async function loadChangelog(){
-  try{
-    const r=await fetch('/api/changelog'); const d=await r.json();
-    const box=document.getElementById('changelogBox');
-    if(!d.ok||!d.entries.length){ box.innerHTML='<div style="padding:14px 18px;color:var(--muted)">Could not load.</div>'; return; }
-    box.innerHTML=d.entries.map((e,i)=>`
-      <div class="cl-row ${i===0?'latest':''}">
-        <span style="color:var(--muted);min-width:155px;flex-shrink:0">${esc(e.date)}</span>
-        <span style="color:var(--purple);flex-shrink:0;margin-right:8px">${esc(e.sha)}</span>
-        <span style="color:${i===0?'var(--green)':'var(--text)'};flex:1">${esc(e.message)}${i===0?' <span style="font-size:10px;color:var(--green);background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);padding:1px 7px;border-radius:4px;margin-left:6px">latest</span>':''}</span>
-      </div>`).join('');
-  }catch(e){ document.getElementById('changelogBox').innerHTML='<div style="padding:14px 18px;color:var(--muted)">Could not load.</div>'; }
-}
+
 
 // ── Collapsible sections ─────────────────────────────────────────────────────
 let logExpanded = false;
@@ -521,12 +498,7 @@ function expandLog(){
   if(!logExpanded){ logExpanded=true; document.getElementById('logCollapse').style.display='block'; document.getElementById('logToggleIcon').textContent='▼ collapse'; }
 }
 let clExpanded = false;
-function toggleChangelog(){
-  clExpanded = !clExpanded;
-  document.getElementById('changelogCollapse').style.display = clExpanded ? 'block' : 'none';
-  document.getElementById('clToggleIcon').textContent = clExpanded ? '▼ collapse' : '▶ expand';
-  if(clExpanded) loadChangelog();
-}
+
 
 // ── Run History ───────────────────────────────────────────────────────────────
 async function loadHistory(){
@@ -542,10 +514,14 @@ async function loadHistory(){
       const col  = e.result==='success'?'var(--green)':e.result==='error'?'var(--red)':'var(--blue)';
       const trigCol = e.trigger==='manual'?'var(--muted)':'var(--purple)';
       const trigTxt = e.trigger==='manual'?'manual':'⏰ scheduled';
-      return `<div style="display:flex;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);font-size:12px;align-items:center">
-        <span style="color:var(--muted);font-family:var(--mono);min-width:170px;flex-shrink:0">${esc(e.time)}</span>
-        <span style="color:${trigCol};min-width:80px;flex-shrink:0">${trigTxt}</span>
-        <span style="color:${col};flex:1">${icon} ${esc(e.summary)}</span>
+      const hostTxt = (e.hosts&&e.hosts.length) ? `<div style="color:var(--muted);font-size:11px;font-family:var(--mono);margin-top:3px">${esc(e.hosts.join(', '))}</div>` : '';
+      return `<div style="padding:10px 18px;border-bottom:1px solid var(--border);font-size:12px">
+        <div style="display:flex;gap:12px;align-items:center">
+          <span style="color:var(--muted);font-family:var(--mono);min-width:170px;flex-shrink:0">${esc(e.time)}</span>
+          <span style="color:${trigCol};min-width:80px;flex-shrink:0">${trigTxt}</span>
+          <span style="color:${col};flex:1">${icon} ${esc(e.summary)}</span>
+        </div>
+        ${hostTxt}
       </div>`;
     }).join('');
   }catch(e){

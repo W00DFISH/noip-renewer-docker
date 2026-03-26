@@ -5,7 +5,7 @@ Runs inside Docker on your Synology NAS — residential IP, no cloud blocks, no 
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.21-green?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.0.22-green?style=flat-square)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
 
